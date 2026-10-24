@@ -30,6 +30,7 @@ final class LauncherModel {
     let logReader = PlayerLogReader()
     let discord = DiscordPresenceClient()
     let historyStore: PlayHistoryStore
+    let gameCatalog: GameCatalog
     var isWorkingFeature = false
     var featureStatus = ""
     var hasModBackup = false
@@ -51,6 +52,7 @@ final class LauncherModel {
         clientSettings = ClientSettingsStore(directory: directory.appendingPathComponent("engine-backups", isDirectory: true))
         modStore = ContentModStore(directory: directory.appendingPathComponent("mods", isDirectory: true))
         historyStore = PlayHistoryStore(directory: directory)
+        gameCatalog = GameCatalog(directory: directory)
         do {
             configuration = try store.load()
         } catch {
@@ -133,7 +135,7 @@ final class LauncherModel {
     }
 
     func saveShortcut(id: UUID?, name: String, placeID: String, engineProfileID: UUID? = nil) throws {
-        var shortcut = try GameShortcut(id: id ?? UUID(), name: name, placeID: placeID)
+        var shortcut = try GameShortcut(id: id ?? UUID(), name: name, placeID: RobloxPlaceInput.placeID(from: placeID))
         shortcut.engineProfileID = engineProfileID
         var next = configuration
         if let index = next.shortcuts.firstIndex(where: { $0.id == shortcut.id }) {

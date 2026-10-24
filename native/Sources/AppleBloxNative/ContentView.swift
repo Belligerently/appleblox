@@ -3,7 +3,7 @@ import AppKit
 import Combine
 
 enum Destination: String, CaseIterable, Identifiable {
-    case launcher = "Launcher", games = "My Games", engine = "Engine", mods = "Mods", accounts = "Accounts", integrations = "Integrations", history = "History", installation = "Installation", diagnostics = "Diagnostics", about = "About"
+    case launcher = "Launcher", games = "My Games", engine = "Engine", mods = "Mods", accounts = "Accounts", integrations = "Integrations", history = "History", installation = "Installation", diagnostics = "Diagnostics", appearance = "Appearance", about = "About"
     static let primaryCases: [Destination] = [.launcher, .games, .engine, .mods]
     var id: Self { self }
     var symbol: String {
@@ -18,6 +18,7 @@ enum Destination: String, CaseIterable, Identifiable {
         case .installation: "externaldrive"
         case .diagnostics: "waveform.path.ecg"
         case .about: "info.circle"
+        case .appearance: "paintpalette"
         }
     }
 }
@@ -25,7 +26,9 @@ enum Destination: String, CaseIterable, Identifiable {
 struct ContentView: View {
     @Bindable var model: LauncherModel
     @State private var destination: Destination = .launcher
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.appReduceMotion) private var appReduceMotion
+    private var reduceMotion: Bool { systemReduceMotion || appReduceMotion }
     @Environment(\.colorScheme) private var colorScheme
     @State private var refreshCount = 0
 
@@ -101,6 +104,7 @@ struct ContentView: View {
             case .installation: InstallationView(model: model)
             case .diagnostics: DiagnosticsView(model: model)
             case .about: AboutView()
+            case .appearance: AppearanceView(model: model)
             }
         }
     }
@@ -109,7 +113,9 @@ struct ContentView: View {
 private struct NavigationTabs: View {
     @Binding var selection: Destination
     @Namespace private var selectionAnimation
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.appReduceMotion) private var appReduceMotion
+    private var reduceMotion: Bool { systemReduceMotion || appReduceMotion }
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -158,7 +164,9 @@ private struct NavigationTabs: View {
 }
 
 struct LauncherBackdrop: View {
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceTransparency) private var systemReduceTransparency
+    @Environment(\.appReduceTransparency) private var appReduceTransparency
+    private var reduceTransparency: Bool { systemReduceTransparency || appReduceTransparency }
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -170,7 +178,9 @@ struct LauncherBackdrop: View {
 
 private struct CompactGlass: ViewModifier {
     let cornerRadius: CGFloat
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceTransparency) private var systemReduceTransparency
+    @Environment(\.appReduceTransparency) private var appReduceTransparency
+    private var reduceTransparency: Bool { systemReduceTransparency || appReduceTransparency }
 
     @ViewBuilder func body(content: Content) -> some View {
         if reduceTransparency {
@@ -224,7 +234,9 @@ struct LauncherView: View {
     let model: LauncherModel
     let showGames: () -> Void
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.appReduceMotion) private var appReduceMotion
+    private var reduceMotion: Bool { systemReduceMotion || appReduceMotion }
     @State private var confirmQuit = false
 
     var body: some View {

@@ -15,6 +15,7 @@ struct AppleBloxApp: App {
     var body: some Scene {
         Window("AppleBlox Native", id: "compact-launcher") {
             ContentView(model: model)
+                .modifier(AppAppearance(settings: model.configuration.appearance))
                 .tint(AppleBloxTheme.primary)
         }
         .defaultSize(width: 660, height: 460)

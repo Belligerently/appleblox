@@ -28,15 +28,15 @@ The app targets **macOS 14 or later**. Liquid Glass is used on macOS 26 and late
 
 | Feature | Included |
 | --- | --- |
-| Launcher | Roblox Player detection, saved games, per-game profiles, and diagnostics |
-| Interface | Compact navigation, Liquid Glass controls, native dialogs, and reduced-motion support |
+| Launcher | Roblox Player detection, saved games with artwork and search, per-game profiles, and diagnostics |
+| Interface | Compact navigation, Liquid Glass controls, System/Light/Dark themes, solid backgrounds, and reduced-motion support |
 | Engine settings | Flag presets, validated JSON import/export, and backup/restore |
 | Content mods | Local texture, sound, and font packs, custom fonts, and original-resource restore |
 | Player updates | Roblox LIVE version checks and validated downloads with previous-app retention |
 | Accounts | Private website sign-in, explicit Player-login import, and Keychain-backed sessions |
 | Integrations | Optional Discord presence, local play history, and opt-in launch-link handling |
 
-This is an ongoing migration. The online mod workshop, server-region picker, game artwork/browser, and some original appearance preferences remain to be ported. Authenticated account switching and live Discord display still need acceptance testing. Roblox may ignore individual engine flags or restrict multiple instances.
+This is an ongoing migration. The online mod workshop, server-region picker, a full online game browser, and some original appearance preferences remain to be ported. Authenticated account switching and live Discord display still need acceptance testing. Roblox may ignore individual engine flags or restrict multiple instances.
 
 The [native developer guide](https://github.com/Belligerently/appleblox-native/blob/swiftui-foundation/native/README.md) describes behavior, validation, and remaining work in detail.
 

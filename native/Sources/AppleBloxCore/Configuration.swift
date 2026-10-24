@@ -36,10 +36,11 @@ public struct NativeConfiguration: Codable, Equatable, Sendable {
     public var shortcuts: [GameShortcut] = []
     public var engine = EngineConfiguration()
     public var features = FeatureSettings()
+    public var appearance = AppearanceSettings()
 
     public init() {}
 
-    private enum CodingKeys: String, CodingKey { case version, customRobloxPath, shortcuts, engine, features }
+    private enum CodingKeys: String, CodingKey { case version, customRobloxPath, shortcuts, engine, features, appearance }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -48,6 +49,7 @@ public struct NativeConfiguration: Codable, Equatable, Sendable {
         shortcuts = try container.decode([GameShortcut].self, forKey: .shortcuts)
         engine = try container.decodeIfPresent(EngineConfiguration.self, forKey: .engine) ?? EngineConfiguration()
         features = try container.decodeIfPresent(FeatureSettings.self, forKey: .features) ?? FeatureSettings()
+        appearance = try container.decodeIfPresent(AppearanceSettings.self, forKey: .appearance) ?? AppearanceSettings()
     }
 
     public func validated() throws -> NativeConfiguration {

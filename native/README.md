@@ -22,7 +22,7 @@ Swift language mode is explicitly 6, with complete concurrency checking. There i
 
 ## Compact Liquid Glass interface
 
-The default window is 660 × 460 points (minimum 580 × 390), with top navigation for Launcher, My Games, Engine, and Mods, plus a More menu for Accounts, Integrations, History, Installation, Diagnostics, and About instead of a sidebar. On macOS 26+, navigation and launch controls use native Liquid Glass. Earlier systems use material and bordered-control fallbacks. The window uses native translucency on macOS 15+ and respects Reduce Transparency and Reduce Motion. Game rows, editing sheets, installation details, and diagnostics use compact spacing.
+The default window is 660 × 460 points (minimum 580 × 390), with top navigation for Launcher, My Games, Engine, and Mods, plus a More menu for Accounts, Integrations, History, Installation, Diagnostics, Appearance, and About instead of a sidebar. On macOS 26+, navigation and launch controls use native Liquid Glass. Earlier systems use material and bordered-control fallbacks. The window uses native translucency on macOS 15+ and respects Reduce Transparency and Reduce Motion. Game rows, editing sheets, installation details, and diagnostics use compact spacing.
 
 The native palette is derived directly from `frontend/src/theme.css`: rose primary `hsl(346.19, 64.65%, 42.16%)` (`#B12646`), neutral backgrounds (`#171717` / `#E6E6E6`), and the original card and foreground colors. Glass retains some translucency, so composited window pixels vary with the desktop.
 
@@ -62,7 +62,17 @@ Native settings live in `~/Library/Application Support/AppleBlox Native/native-s
 - **Game profiles/migration:** Assign an engine profile to each saved game. It applies before a fresh Player session even when global automatic application is off; an already-running Player needs a restart to pick up changed flags. Import one or more original AppleBlox profile-wrapper JSON files, including game mappings. The import is all-or-nothing for native settings and rejects enabled unsupported flags.
 - **Instances:** An optional macOS new-application-instance request is available. Roblox can still enforce its own single-instance rules, and processes share the same Player login. No semaphore bypass or private display API is used.
 
-The native app does not yet reproduce the original online mod workshop, server-region picker, game artwork/browser, custom icon-color presets, background updating while AppleBlox is quit, or all legacy appearance/preferences. Multi-instance behavior and FastFlag effects remain subject to the Roblox client. This is a functional native migration preview, not complete one-for-one parity with every original panel.
+The native app does not yet reproduce the original online mod workshop, server-region picker, a full online game browser, custom icon-color presets, background updating while AppleBlox is quit, or all legacy appearance/preferences. Multi-instance behavior and FastFlag effects remain subject to the Roblox client. This is a functional native migration preview, not complete one-for-one parity with every original panel.
+
+## Appearance and game library
+
+More → Appearance saves System/Light/Dark theme selection, an app-specific reduced-animation preference, solid background controls, and an artwork toggle. macOS Reduce Motion and Reduce Transparency remain effective even if the corresponding app preference is off. These settings are added to the existing native settings file with backward-compatible defaults; the original rose palette and fork logo are retained.
+
+My Games accepts numeric place IDs or canonical HTTPS Roblox `/games/…` URLs, including localized URLs. Short `/share` links are not resolved automatically. Query parameters such as private-server codes are discarded: saved entries always launch the public place ID. Names are suggested after a brief typing delay; custom titles and engine-profile assignments are preserved, and manual entry/save works without a successful lookup.
+
+Saved games have compact artwork rows, name/place-ID search, saved-order/name sorting, a public Roblox page link, and individual metadata refresh. Only the saved library is searched; this does not search Roblox’s online catalog. Roblox’s public place-to-universe, game-details, and thumbnail endpoints supply names, creators, and icons without account cookies. Non-completed or unavailable icons use a placeholder. Metadata lives in `game-details-cache.json` beside native settings, is fresh for 30 minutes, and retains up to 200 entries for offline text fallback; image caching follows system HTTP cache behavior. Turning artwork off stops automatic row lookups and image loading; the Add/Edit editor can still look up a public game name.
+
+New tests cover old/partial appearance settings, invalid settings preservation, accepted/rejected game links, API response handling, thumbnail placeholders and host validation, cache reuse, offline fallback, and lookup cancellation. Existing shortcuts and their IDs remain unchanged.
 
 ## Migration map
 
@@ -80,7 +90,7 @@ The native app does not yet reproduce the original online mod workshop, server-r
 
 ## Verification
 
-`bash test.sh` runs 26 tests covering the original configuration/installation checks plus engine validation and recovery, mod transactions/conflicts/outside edits/symlinks, custom font-family rewrites, legacy profiles, game mappings, release/archive validation, binary cookie encoding/decoding with synthetic credentials, log tailing/rotation, ordered history persistence, and a local mock Discord IPC handshake/activity/ping exchange. No real account credentials, Keychain records, or installed Roblox resources are used in these tests.
+`bash test.sh` runs 34 tests covering the original configuration/installation checks plus engine validation and recovery, mod transactions/conflicts/outside edits/symlinks, custom font-family rewrites, legacy profiles, game mappings, release/archive validation, binary cookie encoding/decoding with synthetic credentials, log tailing/rotation, ordered history persistence, and a local mock Discord IPC handshake/activity/ping exchange. No real account credentials, Keychain records, or installed Roblox resources are used in these tests.
 
 The public LIVE endpoint and a real architecture-specific Roblox archive have also been checked; the archive passed extraction, bundle/version validation, and Roblox signature validation in a temporary workspace. The install/replacement transaction and previous-app retention were verified using temporary fixture applications; no system/user Player installation was changed. UI checks cover compact navigation, account sign-in loading and missing-session validation, live version checking, mod import, and generation of a custom-font pack from real Player font definitions. Authenticated switching, real Discord display, browser-default changes, and simultaneous Player behavior require live user acceptance testing.
 
