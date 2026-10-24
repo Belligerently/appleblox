@@ -5,11 +5,14 @@ struct AppleBloxApp: App {
     @State private var model = LauncherModel()
 
     var body: some Scene {
-        Window("AppleBlox Native", id: "main") {
+        Window("AppleBlox Native", id: "compact-launcher") {
             ContentView(model: model)
                 .tint(.orange)
         }
-        .defaultSize(width: 1000, height: 700)
+        .defaultSize(width: 660, height: 460)
+        .defaultPosition(.center)
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentMinSize)
         .commands {
             CommandMenu("Roblox") {
                 Button("Launch Roblox") { Task { await model.launch() } }

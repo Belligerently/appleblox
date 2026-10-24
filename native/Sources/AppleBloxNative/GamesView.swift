@@ -11,13 +11,13 @@ struct GamesView: View {
     @State private var draft: ShortcutDraft?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            PageHeading(eyebrow: "Less searching, more playing", title: "My Games", subtitle: "Keep your favorite experiences one click away.")
+        VStack(alignment: .leading, spacing: 12) {
+            PageHeading(title: "My Games", subtitle: "Your favorite experiences, a click away.")
             HStack {
-                Text("\(model.configuration.shortcuts.count) saved games").foregroundStyle(.secondary)
+                Text(model.configuration.shortcuts.count == 1 ? "1 saved game" : "\(model.configuration.shortcuts.count) saved games").foregroundStyle(.secondary)
                 Spacer()
                 Button("Add Game", systemImage: "plus") { draft = ShortcutDraft(shortcut: nil) }
-                    .buttonStyle(.borderedProminent).disabled(!model.canSave)
+                    .launchButtonStyle().controlSize(.small).disabled(!model.canSave)
             }
             if model.configuration.shortcuts.isEmpty {
                 ContentUnavailableView {
@@ -31,8 +31,8 @@ struct GamesView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(model.configuration.shortcuts) { shortcut in
-                    HStack(spacing: 16) {
-                        Image(systemName: "gamecontroller.fill").font(.title2).foregroundStyle(.orange)
+                    HStack(spacing: 10) {
+                        Image(systemName: "gamecontroller.fill").font(.title3).foregroundStyle(.orange)
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 4) {
                             Text(shortcut.name).font(.headline)
@@ -51,12 +51,12 @@ struct GamesView: View {
                         .accessibilityLabel("Options for \(shortcut.name)")
                         .disabled(!model.canSave)
                     }
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 5)
                 }
-                .listStyle(.inset)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         }
-        .padding(32)
         .sheet(item: $draft) { draft in
             ShortcutEditor(model: model, shortcut: draft.shortcut)
         }
@@ -80,7 +80,7 @@ private struct ShortcutEditor: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             Text(shortcut == nil ? "Add a game" : "Edit game").font(.title2.bold())
             Form {
                 TextField("Name", text: $name)
@@ -101,9 +101,9 @@ private struct ShortcutEditor: View {
                         dismiss()
                     } catch { validationMessage = error.localizedDescription }
                 }
-                .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+                .launchButtonStyle().keyboardShortcut(.defaultAction)
             }
         }
-        .padding(28).frame(width: 440)
+        .padding(22).frame(width: 380)
     }
 }

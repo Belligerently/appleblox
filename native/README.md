@@ -20,6 +20,10 @@ bash test.sh
 
 Swift language mode is explicitly 6, with complete concurrency checking. There is no default actor isolation or upcoming-feature override. UI state and AppKit operations are isolated to `MainActor`; the core uses Sendable value types. Launching uses the async NSWorkspace API and targets the selected Roblox Player bundle directly.
 
+## Compact Liquid Glass interface
+
+The default window is 660 × 460 points (minimum 580 × 390), with top navigation instead of a sidebar. On macOS 26+, navigation and launch controls use native Liquid Glass. Earlier systems use material and bordered-control fallbacks. The window uses native translucency on macOS 15+ and respects Reduce Transparency and Reduce Motion. Game rows, editing sheets, installation details, and diagnostics use compact spacing.
+
 ## Available in this milestone
 
 - Detect Player in system/user Applications folders or through Launch Services; select another app with a native file picker.
@@ -37,7 +41,7 @@ Native settings live in `~/Library/Application Support/AppleBlox Native/native-s
 | --- | --- |
 | `roblox/path.ts`, `path-manager.ts` | `AppleBloxCore/RobloxInstallation.swift`, `LauncherModel.refresh()` |
 | `roblox/instance.ts` launch via `open -a` | `LauncherModel.launch()` using NSWorkspace |
-| Svelte main window | SwiftUI NavigationSplitView and native forms |
+| Svelte main window | Compact SwiftUI navigation, Liquid Glass controls, and native forms |
 | File-backed settings | Separate typed JSON store with validation and atomic saves |
 | `roblox/fflags.ts`, `mods.ts` | Pending: supported settings, backup and restore |
 | `roblox/downloader.ts`, `updates.ts` | Pending: installation/update lifecycle |
