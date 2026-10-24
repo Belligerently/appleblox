@@ -36,7 +36,9 @@ jobs:
   validate:
     if: github.event_name == 'pull_request'
     needs: plan
-    runs-on: macos-26
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
         with:
@@ -48,7 +50,9 @@ jobs:
   release:
     if: github.event_name != 'pull_request' && needs.plan.outputs.has_commits == 'true'
     needs: plan
-    runs-on: macos-26
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
     timeout-minutes: 360
     permissions:
       contents: write

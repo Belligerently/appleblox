@@ -28,7 +28,7 @@ Each selected source commit is built in its own detached worktree. The workflow'
 
 ## Packages and signing
 
-CI uses a macOS 26 runner, tests the host architecture, cross-compiles both `arm64` and `x86_64`, and verifies the universal executable with `lipo`. It stamps the version, ad-hoc signs and verifies the bundle, then creates ZIP, DMG, and checksum assets. Intel runtime behavior still needs testing on an Intel Mac.
+CI uses GitHub’s `xcode-27` runner with full Xcode (the default Xcode 26.6 compiler on `macos-26` crashes compiling the engine UI), tests the host architecture, cross-compiles both `arm64` and `x86_64`, and verifies the universal executable with `lipo`. It stamps the version, ad-hoc signs and verifies the bundle, then creates ZIP, DMG, and checksum assets. Intel runtime behavior still needs testing on an Intel Mac.
 
 Assets upload to a draft before publication, so download links are available when the release becomes public. Stable releases use GitHub's version-based latest selection; prereleases never become the stable latest download. Existing published releases are left intact on retries. Packaging artifacts are also retained on the workflow run for 14 days.
 
