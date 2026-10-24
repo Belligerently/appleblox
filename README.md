@@ -1,5 +1,7 @@
 # AppleBlox
 
+This fork is developing a native SwiftUI edition in [`native/`](native/README.md). The first milestone includes Roblox detection and launching, saved game shortcuts, and diagnostics. The original application below remains available during migration.
+
 <div align="center">
 <img src=".github/assets/logo.png" style="width:30%;">
 </div>
