@@ -1,71 +1,87 @@
-# AppleBlox
-
 <div align="center">
-<img src=".github/assets/logo.png" style="width:30%;">
+  <img src=".github/assets/appleblox-native.svg" alt="AppleBlox Native rose logo with a blue leaf" width="104">
+  <h1>AppleBlox Native</h1>
+  <p>A compact, native SwiftUI launcher for Roblox on macOS.</p>
+  <p>
+    <a href="https://github.com/Belligerently/appleblox-native/releases">Downloads</a> ·
+    <a href="https://github.com/Belligerently/appleblox-native/tree/swiftui-foundation/native">Native source & documentation</a> ·
+    <a href="https://github.com/Belligerently/appleblox-native/pull/1">Development PR</a>
+  </p>
 </div>
 
----
+[![Native build](https://github.com/Belligerently/appleblox-native/actions/workflows/build.yml/badge.svg?branch=swiftui-foundation)](https://github.com/Belligerently/appleblox-native/actions/workflows/build.yml?query=branch%3Aswiftui-foundation)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-B12646)](LICENSE)
 
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/AppleBlox/appleblox/build.yml?color=%23F43F5E)
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/AppleBlox/appleblox/total?color=%23F43F5E)
-![GitHub License](https://img.shields.io/github/license/AppleBlox/appleblox?color=%23F43F5E)
-![GitHub package.json version](https://img.shields.io/github/package-json/v/AppleBlox/appleblox?color=%23F43F5E)
-![Static Badge](https://img.shields.io/badge/built_with_apples-%23F43F5E)
-[![Discord](https://img.shields.io/discord/1263512148450082837?logo=discord&logoColor=white&label=discord&color=4d3dff)](https://discord.gg/MWHgn8VNZT)
+AppleBlox Native is an independent fork of [AppleBlox](https://github.com/AppleBlox/appleblox), rebuilding the launcher in SwiftUI with a smaller interface and native macOS controls. It keeps the original rose identity and apple-shaped Roblox mark, with a blue leaf to distinguish the fork.
 
-AppleBlox is a Roblox launcher for **MacOS**, inspired by [Bloxstrap](https://github.com/pizzaboxer/bloxstrap). It includes features such as DiscordRPC and Fast-flags, with ongoing development for additional functionality.
+> **Development preview:** Native development currently lives on [`swiftui-foundation`](https://github.com/Belligerently/appleblox-native/tree/swiftui-foundation) in [PR #1](https://github.com/Belligerently/appleblox-native/pull/1). `main` still contains the inherited application until that PR is merged. The features and build instructions below describe the native edition.
 
-The latest version is available on the [Releases](https://github.com/AppleBlox/appleblox/releases/latest) page. For more recent (development) builds, see the [nightly releases](https://nightly.link/AppleBlox/appleblox/workflows/build/dev?preview).
+## Download
 
-## Features
+Get the native app from [this fork’s releases](https://github.com/Belligerently/appleblox-native/releases). Development builds are labeled **Pre-release**. Public versioning begins at **0.1.0**; a stable native release has not been published yet.
 
-AppleBlox supports many useful features, notably the ability to change the Roblox font and icon color along with other assets, go past your screen's refresh rate cap, show what you're playing on Discord, choose which region you want to prioritize joining, and many more features, all documented on the [official documentation](https://docs.appleblox.com).
+Packages include a **universal app for Apple Silicon and Intel**, available as a DMG or ZIP, plus SHA-256 checksums. Open the DMG and drag **AppleBlox Native** into Applications, or extract the ZIP and move the app there.
 
-## Development
+The app targets **macOS 14 or later**. Liquid Glass is used on macOS 26 and later, with material fallbacks on earlier versions. Intel and macOS 14 runtime testing are still outstanding. Builds are currently ad-hoc signed and **not Apple notarized**.
 
-Setting up the AppleBlox development environment:
+## What’s in the native app
 
-1. Clone the repository
-2. Execute `bun install`
+| Feature | Included |
+| --- | --- |
+| Launcher | Roblox Player detection, saved games, per-game profiles, and diagnostics |
+| Interface | Compact navigation, Liquid Glass controls, native dialogs, and reduced-motion support |
+| Engine settings | Flag presets, validated JSON import/export, and backup/restore |
+| Content mods | Local texture, sound, and font packs, custom fonts, and original-resource restore |
+| Player updates | Roblox LIVE version checks and validated downloads with previous-app retention |
+| Accounts | Private website sign-in, explicit Player-login import, and Keychain-backed sessions |
+| Integrations | Optional Discord presence, local play history, and opt-in launch-link handling |
 
-Development commands:
+This is an ongoing migration. The online mod workshop, server-region picker, game artwork/browser, and some original appearance preferences remain to be ported. Authenticated account switching and live Discord display still need acceptance testing. Roblox may ignore individual engine flags or restrict multiple instances.
 
-- `bun run --bun dev`: Start the development environment
-- `bun run --bun build`: Package the application
-- `bun run --bun release`: Build and create a PKG installer
+The [native developer guide](https://github.com/Belligerently/appleblox-native/blob/swiftui-foundation/native/README.md) describes behavior, validation, and remaining work in detail.
 
-AppleBlox is built using [Svelte](https://svelte.dev) for the frontend and [NeutralinoJS](https://neutralino.js.org) for the backend. NeutralinoJS is a lightweight C++ alternative to Electron or NW.JS, suitable for single-platform applications. More information is available at [neutralino.js.org/docs](https://neutralino.js.org/docs).
+## Build from source
 
-## Pre-compiled Binaries
+Use **full Xcode 27 or later**, including its macOS SDK and Swift toolchain. Standalone Command Line Tools are insufficient for the app’s SwiftUI macros. The native app has no third-party Swift package dependencies and does not require Bun or Node.js.
 
-The build script utilizes pre-compiled binaries for `alerter` and `discord-rpc-cli` to simplify the build process:
+```sh
+git clone --branch swiftui-foundation https://github.com/Belligerently/appleblox-native.git
+cd appleblox-native
+bash native/test.sh
+bash native/build.sh
+open 'native/dist/AppleBlox Native.app'
+```
 
-- `alerter`: Sourced from [vjeantet/alerter](https://github.com/vjeantet/alerter) releases
-- `discord-rpc-cli`: Built from [AppleBlox/Discord-RPC-cli](https://github.com/AppleBlox/Discord-RPC-cli)
+To produce a universal app from the repository root:
 
-## Privacy Policy
+```sh
+APPLEBLOX_UNIVERSAL=1 bash native/build.sh
+```
 
-AppleBlox does not collect, store, or transmit any personal data. The only information sent to external non-Roblox servers are statistics about the Roblox game servers you join (uptime, region, ...), when you use the "Region selection" feature. AppleBlox uses the [RoValra[(https://www.rovalra.com/) API and needs to transmit this data to make sure the API stays up-to-date. No personal data is ever collected.
+You can also open `native/Package.swift` in Xcode. The scripts select full Xcode when standalone Command Line Tools are active; set `DEVELOPER_DIR` to use another Xcode installation.
+
+## Releases and versions
+
+App-related pushes are tested and built automatically. Each successful app commit produces a release with versioned ZIP/DMG assets and checksums:
+
+- **`main`:** stable versions `0.1.0`, `0.1.1`, `0.1.2`, … once the native app and workflow are merged.
+- **Other branches:** prereleases such as `0.1.0-dev.1`, `0.1.0-dev.2`, … advancing toward the next stable patch.
+- **Documentation-only changes:** no native release.
+
+Native tags use the `native-v` prefix to keep this fork’s history separate from upstream. Release versions are written into the packaged app; the inherited `package.json` version belongs to the legacy application. See the [release guide](https://github.com/Belligerently/appleblox-native/blob/swiftui-foundation/.github/RELEASING.md) for retries, commit selection, and signing details.
+
+## Data and integrations
+
+Settings, imported mods, backups, and optional play history are stored locally. Saved Roblox sessions use macOS Keychain. Sign-in, game metadata, and Player updates contact Roblox services; enabling Discord presence shares the current game name and public game link with Discord. The native guide documents where data is stored and how optional features work.
 
 ## Contributing
 
-Contributions are welcome. Please feel free to submit issues, pull requests, or discuss ideas. For further discussion, contact `contact@origaming.ch` or reach out on Discord `@Origaming`.
+Use this fork’s [pull requests](https://github.com/Belligerently/appleblox-native/pulls) for fixes and contributions. For bugs, include your macOS version, Mac architecture, app version, reproduction steps, and relevant diagnostics. Remove account/session information from anything you share.
 
-## Gallery
+The native implementation is in `native/`; `frontend/` and `scripts/` contain the inherited Svelte/Neutralino application. See [the legacy notes](docs/LEGACY.md) when working on that code.
 
-<div float="left">
-    <img src=".github/assets/src1.png" style="width:45%;">
-    <img src=".github/assets/src2.png" style="width:45%;">
-    <img src=".github/assets/src3.png" style="width:45%;">
-    <img src=".github/assets/src4.png" style="width:45%;">
-    <img src=".github/assets/src7.png" style="width:45%;">
-    <img src=".github/assets/src5.png" style="width:45%;">
-    <img src=".github/assets/src6.png" style="width:35%;">
-</div>
+## Credits and license
 
-## Credits
+AppleBlox Native retains the [GPL-3.0 license](LICENSE) and the work of **AppleBlox and its contributors**. Original logo by **@typeofnull**; the rose body and blue leaf adapt that mark for this fork. [Bloxstrap](https://github.com/pizzaboxer/bloxstrap) inspired the original project.
 
-- Logo: @typeofnull
-- Inspiration: @pizzaboxer's Bloxstrap
-- Icons: lucide-svelte & icons8
-- Objective-C sidecar: Generated with assistance from ClaudeAI and ChatGPT. Contributors are sought to replace this code.
+This is an independent fork, not an official AppleBlox release. Original project resources and legacy component credits are preserved in the [legacy notes](docs/LEGACY.md).
