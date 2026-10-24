@@ -37,6 +37,20 @@ struct RenderBranding {
             context.clip()
             let gradient = CGGradient(colorsSpace: space, colors: [CGColor(gray: 0.19, alpha: 1), CGColor(gray: 0.075, alpha: 1)] as CFArray, locations: [0, 1])!
             context.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: size.width, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+            let blueGlow = CGGradient(colorsSpace: space,
+                                      colors: [CGColor(red: 0.04, green: 0.52, blue: 1, alpha: 0.24),
+                                               CGColor(red: 0.04, green: 0.52, blue: 1, alpha: 0)] as CFArray,
+                                      locations: [0, 1])!
+            let blueCenter = CGPoint(x: size.width * 0.12, y: size.height * 0.12)
+            context.drawRadialGradient(blueGlow, startCenter: blueCenter, startRadius: 0,
+                                       endCenter: blueCenter, endRadius: size.width * 0.88, options: [])
+            let roseGlow = CGGradient(colorsSpace: space,
+                                      colors: [CGColor(red: 0.69, green: 0.15, blue: 0.27, alpha: 0.2),
+                                               CGColor(red: 0.69, green: 0.15, blue: 0.27, alpha: 0)] as CFArray,
+                                      locations: [0, 1])!
+            let roseCenter = CGPoint(x: size.width * 0.92, y: size.height * 0.9)
+            context.drawRadialGradient(roseGlow, startCenter: roseCenter, startRadius: 0,
+                                       endCenter: roseCenter, endRadius: size.width * 0.82, options: [])
             context.restoreGState()
             context.addPath(shape)
             context.setStrokeColor(CGColor(gray: 1, alpha: 0.12))
@@ -50,14 +64,21 @@ struct RenderBranding {
                                   colors: [CGColor(red: 206 / 255, green: 13 / 255, blue: 62 / 255, alpha: 1),
                                            CGColor(red: 133 / 255, green: 8 / 255, blue: 40 / 255, alpha: 1)] as CFArray,
                                   locations: [0, 1])!
-        func fill(_ path: CGPath, rule: CGPathFillRule = .winding) {
+        func fill(_ path: CGPath, rule: CGPathFillRule = .winding, paint: CGGradient, start: CGPoint, end: CGPoint) {
             context.saveGState()
             context.addPath(path)
             context.clip(using: rule)
-            context.drawLinearGradient(gradient, start: CGPoint(x: 88.1429, y: 27.5218), end: CGPoint(x: 4.19202, y: 341.617), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+            context.drawLinearGradient(paint, start: start, end: end, options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
             context.restoreGState()
         }
-        fill(ForkLogoGeometry.outline(), rule: .evenOdd)
+        fill(ForkLogoGeometry.bodyPath(), rule: .evenOdd, paint: gradient,
+             start: CGPoint(x: 88.1429, y: 27.5218), end: CGPoint(x: 4.19202, y: 341.617))
+        let blue = CGGradient(colorsSpace: space,
+                              colors: [CGColor(red: 88 / 255, green: 191 / 255, blue: 1, alpha: 1),
+                                       CGColor(red: 10 / 255, green: 132 / 255, blue: 1, alpha: 1)] as CFArray,
+                              locations: [0, 1])!
+        fill(ForkLogoGeometry.leafPath(), paint: blue,
+             start: CGPoint(x: 337, y: 0), end: CGPoint(x: 216, y: 82))
         guard let image = context.makeImage(),
               let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else {
             throw CocoaError(.fileWriteUnknown)

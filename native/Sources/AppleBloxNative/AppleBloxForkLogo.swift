@@ -8,6 +8,13 @@ struct AppleBloxForkLogo: View {
         endPoint: UnitPoint(x: 4.19202 / 408, y: 341.617 / 434)
     )
 
+    private let leafGradient = LinearGradient(
+        colors: [Color(red: 88 / 255, green: 191 / 255, blue: 1),
+                 Color(red: 10 / 255, green: 132 / 255, blue: 1)],
+        startPoint: UnitPoint(x: 337.0 / 408, y: 0),
+        endPoint: UnitPoint(x: 216.0 / 408, y: 82.0 / 434)
+    )
+
     var body: some View {
         GeometryReader { geometry in
             let scale = min(geometry.size.width / ForkLogoGeometry.width, geometry.size.height / ForkLogoGeometry.height)
@@ -15,8 +22,11 @@ struct AppleBloxForkLogo: View {
                 translationX: (geometry.size.width - ForkLogoGeometry.width * scale) / 2,
                 y: (geometry.size.height - ForkLogoGeometry.height * scale) / 2
             ).scaledBy(x: scale, y: scale)
-            Path(ForkLogoGeometry.outline()).applying(transform)
-                .fill(gradient, style: FillStyle(eoFill: true))
+            ZStack {
+                Path(ForkLogoGeometry.bodyPath()).applying(transform)
+                    .fill(gradient, style: FillStyle(eoFill: true))
+                Path(ForkLogoGeometry.leafPath()).applying(transform).fill(leafGradient)
+            }
         }
         .accessibilityHidden(true)
     }

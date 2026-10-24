@@ -3,9 +3,8 @@ import CoreGraphics
 enum ForkLogoGeometry {
     static let width: CGFloat = 408
     static let height: CGFloat = 434
-    static let branchStrokeWidth: CGFloat = 16
 
-    static func outline() -> CGPath {
+    static func bodyPath() -> CGPath {
         let path = CGMutablePath()
         path.move(to: CGPoint(x: 205.339, y: 87.3329))
         path.addLine(to: CGPoint(x: 206.841, y: 79.7727))
@@ -28,38 +27,23 @@ enum ForkLogoGeometry {
         path.addCurve(to: CGPoint(x: 212.319, y: 90.602), control1: CGPoint(x: 235.963, y: 96.4959), control2: CGPoint(x: 222.855, y: 95.536))
         path.addLine(to: CGPoint(x: 205.339, y: 87.3329))
         path.closeSubpath()
+        path.move(to: CGPoint(x: 259.824, y: 193.746))
+        path.addLine(to: CGPoint(x: 171.771, y: 170.151))
+        path.addLine(to: CGPoint(x: 148.101, y: 258.205))
+        path.addLine(to: CGPoint(x: 236.229, y: 281.8))
+        path.addLine(to: CGPoint(x: 259.824, y: 193.746))
+        path.closeSubpath()
+        return path
+    }
+
+    static func leafPath() -> CGPath {
+        let path = CGMutablePath()
         path.move(to: CGPoint(x: 241.276, y: 33.9568))
         path.addCurve(to: CGPoint(x: 216.493, y: 81.6897), control1: CGPoint(x: 229.107, y: 46.8009), control2: CGPoint(x: 220.213, y: 62.9628))
         path.addCurve(to: CGPoint(x: 313.206, y: 50.5715), control1: CGPoint(x: 239.733, y: 92.5735), control2: CGPoint(x: 285.015, y: 81.0234))
         path.addCurve(to: CGPoint(x: 337.587, y: 1.57772), control1: CGPoint(x: 325.454, y: 37.6417), control2: CGPoint(x: 334.615, y: 21.2171))
         path.addCurve(to: CGPoint(x: 241.276, y: 33.9568), control1: CGPoint(x: 302.343, y: -4.69722), control2: CGPoint(x: 265.229, y: 8.07947))
         path.closeSubpath()
-        let stroke = branchLines().copy(strokingWithWidth: branchStrokeWidth * 1.2,
-                                        lineCap: .round, lineJoin: .round, miterLimit: 10)
-        let cutout = stroke.union(branchNodes())
-        return path.subtracting(cutout)
-    }
-
-    private static func branchLines() -> CGPath {
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: 0, y: 43))
-        path.addLine(to: CGPoint(x: 0, y: 13))
-        path.move(to: CGPoint(x: -30, y: -40))
-        path.addLine(to: CGPoint(x: -30, y: -18))
-        path.addCurve(to: CGPoint(x: 0, y: 13), control1: CGPoint(x: -30, y: 0), control2: CGPoint(x: 0, y: -4))
-        path.move(to: CGPoint(x: 30, y: -40))
-        path.addLine(to: CGPoint(x: 30, y: -18))
-        path.addCurve(to: CGPoint(x: 0, y: 13), control1: CGPoint(x: 30, y: 0), control2: CGPoint(x: 0, y: -4))
-        var transform = CGAffineTransform(translationX: 204, y: 226).rotated(by: .pi / 12).scaledBy(x: 1.2, y: 1.2)
-        return path.copy(using: &transform)!
-    }
-
-    private static func branchNodes() -> CGPath {
-        let path = CGMutablePath()
-        for center in [CGPoint(x: -30, y: -40), CGPoint(x: 30, y: -40), CGPoint(x: 0, y: 43)] {
-            path.addEllipse(in: CGRect(x: center.x - 12, y: center.y - 12, width: 24, height: 24))
-        }
-        var transform = CGAffineTransform(translationX: 204, y: 226).rotated(by: .pi / 12).scaledBy(x: 1.2, y: 1.2)
-        return path.copy(using: &transform)!
+        return path
     }
 }
