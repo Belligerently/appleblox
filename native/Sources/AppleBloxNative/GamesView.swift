@@ -9,6 +9,7 @@ private struct ShortcutDraft: Identifiable {
 struct GamesView: View {
     let model: LauncherModel
     @State private var draft: ShortcutDraft?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -32,7 +33,7 @@ struct GamesView: View {
             } else {
                 List(model.configuration.shortcuts) { shortcut in
                     HStack(spacing: 10) {
-                        Image(systemName: "gamecontroller.fill").font(.title3).foregroundStyle(.orange)
+                        Image(systemName: "gamecontroller.fill").font(.title3).foregroundStyle(AppleBloxTheme.primary)
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 4) {
                             Text(shortcut.name).font(.headline)
@@ -55,6 +56,7 @@ struct GamesView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
+                .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: model.configuration.shortcuts)
             }
         }
         .sheet(item: $draft) { draft in

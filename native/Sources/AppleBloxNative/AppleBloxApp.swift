@@ -7,7 +7,7 @@ struct AppleBloxApp: App {
     var body: some Scene {
         Window("AppleBlox Native", id: "compact-launcher") {
             ContentView(model: model)
-                .tint(.orange)
+                .tint(AppleBloxTheme.primary)
         }
         .defaultSize(width: 660, height: 460)
         .defaultPosition(.center)

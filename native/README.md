@@ -24,6 +24,10 @@ Swift language mode is explicitly 6, with complete concurrency checking. There i
 
 The default window is 660 × 460 points (minimum 580 × 390), with top navigation instead of a sidebar. On macOS 26+, navigation and launch controls use native Liquid Glass. Earlier systems use material and bordered-control fallbacks. The window uses native translucency on macOS 15+ and respects Reduce Transparency and Reduce Motion. Game rows, editing sheets, installation details, and diagnostics use compact spacing.
 
+The native palette is derived directly from `frontend/src/theme.css`: rose primary `hsl(346.19, 64.65%, 42.16%)` (`#B12646`), neutral backgrounds (`#171717` / `#E6E6E6`), and the original card and foreground colors. Glass retains some translucency, so composited window pixels vary with the desktop.
+
+Tab selection uses one moving highlight; page changes crossfade in a fixed content area. Navigation from Quick Play follows the same path as the tabs. Refresh feedback and launch-progress changes animate locally; saved game rows animate on insert/remove. Reduce Motion disables these custom animations.
+
 ## Available in this milestone
 
 - Detect Player in system/user Applications folders or through Launch Services; select another app with a native file picker.

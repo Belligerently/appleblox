@@ -17,48 +17,42 @@ struct ContentView: View {
     @Bindable var model: LauncherModel
     @State private var destination: Destination = .launcher
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var refreshCount = 0
 
     var body: some View {
         VStack(spacing: 18) {
             HStack(spacing: 9) {
-                Image(systemName: "square.stack.3d.up.fill").foregroundStyle(.orange).font(.title3)
+                Image(systemName: "square.stack.3d.up.fill").foregroundStyle(AppleBloxTheme.primary).font(.title3)
                 Text("AppleBlox").font(.headline)
                 Text("NATIVE").font(.system(size: 9, weight: .bold, design: .rounded))
                     .tracking(1.4).foregroundStyle(.secondary)
                 Spacer()
-                Button("Refresh", systemImage: "arrow.clockwise", action: model.refresh)
-                    .labelStyle(.iconOnly).buttonStyle(.plain).frame(width: 28, height: 28)
-                    .compactGlass(cornerRadius: 14).help("Refresh installation and running status")
-                    .disabled(model.isLaunching)
-            }
-            CompactGlassGroup(spacing: 6) {
-                HStack(spacing: 6) {
-                    ForEach(Destination.allCases) { item in
-                        Button {
-                            withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) { destination = item }
-                        } label: {
-                            Label(item.rawValue, systemImage: item.symbol)
-                                .font(.system(size: 12, weight: .medium))
-                                .frame(maxWidth: .infinity).padding(.vertical, 9).contentShape(.rect)
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(destination == item ? Color.orange : Color.secondary)
-                        .compactGlass(cornerRadius: 12, active: destination == item)
-                        .accessibilityAddTraits(destination == item ? .isSelected : [])
-                    }
+                Button {
+                    refreshCount += 1
+                    model.refresh()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .rotationEffect(.degrees(reduceMotion ? 0 : Double(refreshCount) * 360))
+                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: refreshCount)
+                        .frame(width: 28, height: 28)
                 }
+                .buttonStyle(.plain).compactGlass(cornerRadius: 14)
+                .help("Refresh installation and running status").accessibilityLabel("Refresh")
+                .disabled(model.isLaunching)
             }
-            Group {
-                switch destination {
-                case .launcher: LauncherView(model: model, showGames: { destination = .games })
-                case .games: GamesView(model: model)
-                case .installation: InstallationView(model: model)
-                case .diagnostics: DiagnosticsView(model: model)
-                }
+            NavigationTabs(selection: $destination)
+            ZStack(alignment: .topLeading) {
+                pageContent
+                    .transaction { $0.animation = nil }
+                    .id(destination)
+                    .transition(reduceMotion ? .identity : .opacity)
             }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: destination)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 18)
+        .foregroundStyle(AppleBloxTheme.foreground(for: colorScheme))
         .background { LauncherBackdrop() }
         .nativeWindowMaterial()
         .frame(minWidth: 580, minHeight: 390)
@@ -68,53 +62,78 @@ struct ContentView: View {
             Button("OK", role: .cancel) { model.errorMessage = nil }
         } message: { Text(model.errorMessage ?? "") }
     }
+
+    private var pageContent: some View {
+        Group {
+            switch destination {
+            case .launcher: LauncherView(model: model, showGames: { destination = .games })
+            case .games: GamesView(model: model)
+            case .installation: InstallationView(model: model)
+            case .diagnostics: DiagnosticsView(model: model)
+            }
+        }
+    }
+}
+
+private struct NavigationTabs: View {
+    @Binding var selection: Destination
+    @Namespace private var selectionAnimation
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(Destination.allCases) { item in
+                Button { selection = item } label: {
+                    Label(item.rawValue, systemImage: item.symbol)
+                        .font(.system(size: 12, weight: .medium))
+                        .frame(maxWidth: .infinity).padding(.vertical, 9)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(selection == item ? AppleBloxTheme.selectedText(for: colorScheme) : Color.secondary)
+                .background {
+                    if selection == item {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(AppleBloxTheme.primary.opacity(colorScheme == .dark ? 0.32 : 0.14))
+                            .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(AppleBloxTheme.primary.opacity(0.24)) }
+                            .matchedGeometryEffect(id: "selected-tab", in: selectionAnimation)
+                    }
+                }
+                .accessibilityAddTraits(selection == item ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .compactGlass(cornerRadius: 14)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.25, extraBounce: 0), value: selection)
+    }
 }
 
 struct LauncherBackdrop: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        ZStack {
-            if !reduceTransparency {
-                LinearGradient(colors: [.orange.opacity(0.13), .clear, .cyan.opacity(0.1)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
-                RadialGradient(colors: [.orange.opacity(0.12), .clear],
-                               center: .topLeading, startRadius: 0, endRadius: 330)
-            }
-        }
-        .ignoresSafeArea().allowsHitTesting(false)
-    }
-}
-
-struct CompactGlassGroup<Content: View>: View {
-    let spacing: CGFloat
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        if #available(macOS 26, *) {
-            GlassEffectContainer(spacing: spacing, content: content)
-        } else { content() }
+        AppleBloxTheme.background(for: colorScheme)
+            .opacity(reduceTransparency ? 1 : 0.88)
+            .ignoresSafeArea().allowsHitTesting(false)
     }
 }
 
 private struct CompactGlass: ViewModifier {
     let cornerRadius: CGFloat
-    let active: Bool
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @ViewBuilder func body(content: Content) -> some View {
         if reduceTransparency {
-            content.background(active ? Color.accentColor.opacity(0.18) : Color(nsColor: .controlBackgroundColor),
+            content.background(Color(nsColor: .controlBackgroundColor),
                                in: .rect(cornerRadius: cornerRadius))
         } else if #available(macOS 26, *) {
-            if active {
-                content.glassEffect(.regular.tint(.orange.opacity(0.22)).interactive(), in: .rect(cornerRadius: cornerRadius))
-            } else {
-                content.glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
-            }
+            content.glassEffect(.regular.interactive(),
+                                in: .rect(cornerRadius: cornerRadius))
         } else {
             content.background(.thinMaterial, in: .rect(cornerRadius: cornerRadius))
-                .overlay { RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(.primary.opacity(active ? 0.2 : 0.06)) }
+                .overlay { RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(.primary.opacity(0.06)) }
         }
     }
 }
@@ -128,13 +147,13 @@ extension View {
         }
     }
 
-    func compactGlass(cornerRadius: CGFloat = 12, active: Bool = false) -> some View {
-        modifier(CompactGlass(cornerRadius: cornerRadius, active: active))
+    func compactGlass(cornerRadius: CGFloat = 12) -> some View {
+        modifier(CompactGlass(cornerRadius: cornerRadius))
     }
 
     @ViewBuilder func launchButtonStyle() -> some View {
         if #available(macOS 26, *) {
-            buttonStyle(.glassProminent).buttonBorderShape(.capsule).tint(.orange)
+            buttonStyle(.glassProminent).buttonBorderShape(.capsule).tint(AppleBloxTheme.primary)
         }
         else { buttonStyle(.borderedProminent) }
     }
@@ -156,15 +175,17 @@ struct PageHeading: View {
 struct LauncherView: View {
     let model: LauncherModel
     let showGames: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 14) {
                     Image(systemName: "square.stack.3d.up.fill")
-                        .font(.system(size: 28, weight: .medium)).foregroundStyle(.orange)
+                        .font(.system(size: 28, weight: .medium)).foregroundStyle(AppleBloxTheme.primary)
                         .frame(width: 56, height: 56)
-                        .background(.orange.opacity(0.1), in: .rect(cornerRadius: 16)).accessibilityHidden(true)
+                        .background(AppleBloxTheme.primary.opacity(0.1), in: .rect(cornerRadius: 16)).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Roblox Player").font(.title2.weight(.semibold))
                         Label(model.status, systemImage: model.installation == nil ? "exclamationmark.circle" : "checkmark.circle.fill")
@@ -176,15 +197,27 @@ struct LauncherView: View {
                     }
                 }
                 .padding(18).frame(maxWidth: .infinity, alignment: .leading)
-                .background(.primary.opacity(0.035), in: .rect(cornerRadius: 20))
+                .background(AppleBloxTheme.card(for: colorScheme).opacity(0.75), in: .rect(cornerRadius: 20))
                 .overlay { RoundedRectangle(cornerRadius: 20).strokeBorder(.primary.opacity(0.06)) }
                 HStack(spacing: 10) {
                     Button {
                         Task { await model.launch() }
                     } label: {
-                        Label(model.isLaunching ? "Opening…" : "Launch Roblox", systemImage: "play.fill")
-                            .font(.system(size: 13, weight: .semibold))
-                            .frame(maxWidth: .infinity).padding(.vertical, 7)
+                        HStack(spacing: 8) {
+                            ZStack {
+                                if model.isLaunching {
+                                    ProgressView().controlSize(.small)
+                                } else {
+                                    Image(systemName: "play.fill")
+                                }
+                            }
+                            .frame(width: 16, height: 16)
+                            Text(model.isLaunching ? "Opening…" : "Launch Roblox")
+                                .contentTransition(.opacity)
+                        }
+                        .font(.system(size: 13, weight: .semibold))
+                        .frame(maxWidth: .infinity).padding(.vertical, 7)
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: model.isLaunching)
                     }
                     .launchButtonStyle().controlSize(.large)
                     .disabled(model.installation == nil || model.isLaunching).keyboardShortcut("r", modifiers: .command)
@@ -206,14 +239,14 @@ struct LauncherView: View {
                 if model.configuration.shortcuts.isEmpty {
                     Button(action: showGames) {
                         HStack(spacing: 10) {
-                            Image(systemName: "plus.circle").foregroundStyle(.orange)
+                            Image(systemName: "plus.circle").foregroundStyle(AppleBloxTheme.primary)
                             Text("Add your favorite games").font(.callout)
                             Spacer()
                             Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
                         }
                         .padding(14).contentShape(.rect)
                     }
-                    .buttonStyle(.plain).background(.primary.opacity(0.035), in: .rect(cornerRadius: 14))
+                    .buttonStyle(.plain).background(AppleBloxTheme.card(for: colorScheme).opacity(0.75), in: .rect(cornerRadius: 14))
                 } else {
                     VStack(spacing: 0) {
                         ForEach(model.configuration.shortcuts.prefix(3)) { shortcut in
@@ -229,7 +262,7 @@ struct LauncherView: View {
                             .padding(.horizontal, 14).padding(.vertical, 9)
                         }
                     }
-                    .background(.primary.opacity(0.035), in: .rect(cornerRadius: 14))
+                    .background(AppleBloxTheme.card(for: colorScheme).opacity(0.75), in: .rect(cornerRadius: 14))
                 }
             }
         }
@@ -237,7 +270,7 @@ struct LauncherView: View {
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 5) {
                 Image(systemName: "swift")
-                Text("Native preview · 0.1.1")
+                Text("Native preview · 0.1.2")
                 Spacer()
                 Text("⌘R to launch")
             }
