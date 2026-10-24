@@ -23,7 +23,7 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 18) {
             HStack(spacing: 9) {
-                AppleBloxForkLogo().frame(width: 21, height: 23)
+                AppleBloxForkLogo().frame(width: 25, height: 27)
                 Text("AppleBlox").font(.headline)
                 Text("NATIVE").font(.system(size: 9, weight: .bold, design: .rounded))
                     .tracking(1.4).foregroundStyle(.secondary)
@@ -270,7 +270,7 @@ struct LauncherView: View {
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 5) {
                 Image(systemName: "swift")
-                Text("Native preview · 0.1.3")
+                Text("Native preview · 0.1.4")
                 Spacer()
                 Text("⌘R to launch")
             }

@@ -18,7 +18,7 @@ struct AppleBloxForkLogo: View {
             ZStack {
                 Path(ForkLogoGeometry.outline()).applying(transform).fill(gradient, style: FillStyle(eoFill: true))
                 Path(ForkLogoGeometry.branchLines()).applying(transform)
-                    .stroke(gradient, style: StrokeStyle(lineWidth: 7 * scale, lineCap: .round, lineJoin: .round))
+                    .stroke(gradient, style: StrokeStyle(lineWidth: ForkLogoGeometry.branchStrokeWidth * scale, lineCap: .round, lineJoin: .round))
                 Path(ForkLogoGeometry.branchNodes()).applying(transform).fill(gradient)
             }
         }

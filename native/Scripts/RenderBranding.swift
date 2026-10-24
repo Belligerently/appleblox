@@ -58,7 +58,7 @@ struct RenderBranding {
             context.restoreGState()
         }
         fill(ForkLogoGeometry.outline(), rule: .evenOdd)
-        fill(ForkLogoGeometry.branchLines().copy(strokingWithWidth: 7, lineCap: .round, lineJoin: .round, miterLimit: 10))
+        fill(ForkLogoGeometry.branchLines().copy(strokingWithWidth: ForkLogoGeometry.branchStrokeWidth, lineCap: .round, lineJoin: .round, miterLimit: 10))
         fill(ForkLogoGeometry.branchNodes())
         guard let image = context.makeImage(),
               let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else {
