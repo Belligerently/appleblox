@@ -30,7 +30,7 @@ Tab selection uses one moving highlight; page changes crossfade in a fixed conte
 
 ## Fork branding
 
-The original AppleBlox silhouette and rose gradient are retained, with a larger hollow square and a bold branch symbol to distinguish this fork at small sizes. The opening is 154 units wide; the symbol uses 12-unit strokes and 10-unit node radii. Original logo credit: @typeofnull, as credited by AppleBlox. The inherited GPL-3.0 license continues to apply.
+The original AppleBlox silhouette and rose gradient are retained, with the fork symbol itself cut out of the body as transparent negative space. The original square opening is replaced by the fork-shaped hole; the outer silhouette and leaf remain unchanged. Native rendering and icon exports use a boolean path subtraction, while the reusable SVG uses a luminance mask. Original logo credit: @typeofnull, as credited by AppleBlox. The inherited GPL-3.0 license continues to apply.
 
 - `Resources/Branding/AppleBloxFork.svg` is the reusable vector mark.
 - `ForkLogoGeometry.swift` shares the mark geometry between the SwiftUI view and the icon renderer.

@@ -15,12 +15,8 @@ struct AppleBloxForkLogo: View {
                 translationX: (geometry.size.width - ForkLogoGeometry.width * scale) / 2,
                 y: (geometry.size.height - ForkLogoGeometry.height * scale) / 2
             ).scaledBy(x: scale, y: scale)
-            ZStack {
-                Path(ForkLogoGeometry.outline()).applying(transform).fill(gradient, style: FillStyle(eoFill: true))
-                Path(ForkLogoGeometry.branchLines()).applying(transform)
-                    .stroke(gradient, style: StrokeStyle(lineWidth: ForkLogoGeometry.branchStrokeWidth * scale, lineCap: .round, lineJoin: .round))
-                Path(ForkLogoGeometry.branchNodes()).applying(transform).fill(gradient)
-            }
+            Path(ForkLogoGeometry.outline()).applying(transform)
+                .fill(gradient, style: FillStyle(eoFill: true))
         }
         .accessibilityHidden(true)
     }
