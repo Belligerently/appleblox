@@ -9,7 +9,7 @@
   </p>
 </div>
 
-[![Native build](https://github.com/Belligerently/appleblox-native/actions/workflows/build.yml/badge.svg?branch=swiftui-foundation)](https://github.com/Belligerently/appleblox-native/actions/workflows/build.yml?query=branch%3Aswiftui-foundation)
+[![Native build](https://img.shields.io/github/actions/workflow/status/Belligerently/appleblox-native/build.yml?branch=swiftui-foundation&label=native%20build)](https://github.com/Belligerently/appleblox-native/actions/workflows/build.yml?query=branch%3Aswiftui-foundation)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-B12646)](LICENSE)
 
 AppleBlox Native is an independent fork of [AppleBlox](https://github.com/AppleBlox/appleblox), rebuilding the launcher in SwiftUI with a smaller interface and native macOS controls. It keeps the original rose identity and apple-shaped Roblox mark, with a blue leaf to distinguish the fork.
