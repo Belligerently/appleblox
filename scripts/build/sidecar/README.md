@@ -1,4 +1,6 @@
-# Sidecar
+# Legacy AppleBlox sidecars
+
+These utilities belong to the inherited Svelte/Neutralino application. AppleBlox Native uses the SwiftUI implementation in `native/`; these sidecars are not bundled by its build script. See the [fork README](../../../README.md) and [legacy notes](../../../docs/LEGACY.md).
 
 Native macOS utilities for AppleBlox application operations. These scripts handle system-level tasks that require native code execution and are invoked from the Neutralino framework.
 

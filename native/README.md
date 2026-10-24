@@ -1,10 +1,10 @@
-# AppleBlox Native — SwiftUI migration
+# AppleBlox Native — developer guide
 
 A native macOS 14+ app developed inside the AppleBlox fork. The original Svelte/Neutralino implementation remains available at the repository root. AppleBlox's GPL-3.0 license and attribution continue to apply.
 
 ## Build and run
 
-Requires macOS and Xcode with the macOS 26 SDK or later and a Swift 6 toolchain. The resulting app supports macOS 14+. No third-party Swift dependencies. The scripts prefer `/Applications/Xcode.app` when standalone Command Line Tools are selected, without changing the system selection. Override with `DEVELOPER_DIR` if needed. Current SDK 27 Command Line Tools omit the SwiftUI macro plugin needed by `@State`.
+Requires macOS and full Xcode 27 or later with its macOS SDK and Swift toolchain. The resulting app supports macOS 14+. No third-party Swift dependencies. The scripts prefer `/Applications/Xcode.app` when standalone Command Line Tools are selected, without changing the system selection. Override with `DEVELOPER_DIR` if needed. Current SDK 27 Command Line Tools omit the SwiftUI macro plugin needed by `@State`.
 
 ```sh
 cd native
@@ -12,7 +12,7 @@ bash build.sh
 open 'dist/AppleBlox Native.app'
 ```
 
-Open `native/Package.swift` in Xcode to edit the package. The bundle script supplies the app metadata and a local ad-hoc signature. This preview is not notarized or prepared for public distribution.
+Open `native/Package.swift` in Xcode to edit the package. The bundle script supplies the app metadata and a local ad-hoc signature. Automated development releases use the same ad-hoc signature and are not Apple notarized.
 
 ```sh
 bash test.sh
@@ -37,7 +37,7 @@ The original AppleBlox geometry is preserved exactly: tilted square, square open
 - `AppleBloxForkLogo.swift` draws the mark at native resolution in the header and launcher.
 - `Scripts/RenderBranding.swift` generates a transparent PNG and a complete icon set. The bundle script converts it to ICNS for the Dock and Finder. Generated assets live under `.build/branding/`.
 
-## Available in this milestone
+## Launcher and engine features
 
 - Detect Player in system/user Applications folders or through Launch Services; select another app with a native file picker.
 - Validate the exact Player bundle identifier and executable, excluding Studio.
@@ -50,7 +50,7 @@ The original AppleBlox geometry is preserved exactly: tilted square, square open
 
 Native settings live in `~/Library/Application Support/AppleBlox Native/native-settings.json`. Set `APPLEBLOX_NATIVE_DATA_DIR` to isolate test/demo data. Original AppleBlox engine-profile JSON files can be imported from Integrations. Other legacy preference panels are not automatically migrated.
 
-## Additional native features (0.3.0)
+## Mods, accounts, updates, and integrations
 
 - **Content mods:** Import resource folders beginning with `content/`, `PlatformContent/`, or `ExtraContent/`. Toggle individual packs, apply explicitly or before fresh launches, and restore original resources. Textures, sounds, fonts, and JSON are supported; meshes, scripts, executables, symlinks, and conflicting replacements are rejected. Apply stages a complete resource tree and rolls back a failed replacement. Resource digests detect outside edits or a changed backup. Removed library entries keep their imported files in the Mods folder for recovery.
 - **Custom fonts:** Select a TTF/OTF font to build a mod that rewrites Roblox font-family asset references while preserving face weights/styles. Apply it through Mods. Enable only one font pack at a time.

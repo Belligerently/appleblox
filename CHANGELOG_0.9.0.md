@@ -1,3 +1,5 @@
+> Historical release notes for upstream AppleBlox. This is not the AppleBlox Native version history; see [this fork’s releases](https://github.com/Belligerently/appleblox-native/releases).
+
 # AppleBlox 0.9.0 – Release Notes
 
 ## What's New in 0.9.0

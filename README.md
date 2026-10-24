@@ -1,62 +1,87 @@
-# AppleBlox Native
+<div align="center">
+  <img src=".github/assets/appleblox-native.svg" alt="AppleBlox Native rose logo with a blue leaf" width="104">
+  <h1>AppleBlox Native</h1>
+  <p>A compact, native SwiftUI launcher for Roblox on macOS.</p>
+  <p>
+    <a href="https://github.com/Belligerently/appleblox-native/releases">Downloads</a> ·
+    <a href="https://github.com/Belligerently/appleblox-native/tree/swiftui-foundation/native">Native source & documentation</a> ·
+    <a href="https://github.com/Belligerently/appleblox-native/pull/1">Development PR</a>
+  </p>
+</div>
 
-A compact SwiftUI Roblox launcher for macOS, forked from [AppleBlox](https://github.com/AppleBlox/appleblox).
+[![Native build](https://github.com/Belligerently/appleblox-native/actions/workflows/build.yml/badge.svg?branch=swiftui-foundation)](https://github.com/Belligerently/appleblox-native/actions/workflows/build.yml?query=branch%3Aswiftui-foundation)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-B12646)](LICENSE)
 
-[![Native build](https://github.com/Belligerently/appleblox-native/actions/workflows/build.yml/badge.svg)](https://github.com/Belligerently/appleblox-native/actions/workflows/build.yml)
+AppleBlox Native is an independent fork of [AppleBlox](https://github.com/AppleBlox/appleblox), rebuilding the launcher in SwiftUI with a smaller interface and native macOS controls. It keeps the original rose identity and apple-shaped Roblox mark, with a blue leaf to distinguish the fork.
 
-The native app lives in [`native/`](native/README.md). It uses Liquid Glass on macOS 26 and later, with fallbacks for macOS 14 and 15. Its rose body and blue leaf preserve the original AppleBlox mark while distinguishing this fork.
+> **Development preview:** Native development currently lives on [`swiftui-foundation`](https://github.com/Belligerently/appleblox-native/tree/swiftui-foundation) in [PR #1](https://github.com/Belligerently/appleblox-native/pull/1). `main` still contains the inherited application until that PR is merged. The features and build instructions below describe the native edition.
 
-## Downloads
+## Download
 
-[Stable releases](https://github.com/Belligerently/appleblox-native/releases/latest) · [All releases, including development builds](https://github.com/Belligerently/appleblox-native/releases)
+Get the native app from [this fork’s releases](https://github.com/Belligerently/appleblox-native/releases). Development builds are labeled **Pre-release**. Public versioning begins at **0.1.0**; a stable native release has not been published yet.
 
-Releases contain a universal application for Apple Silicon and Intel, packaged as a DMG and ZIP with SHA-256 checksums. Public native versioning starts at **0.1.0**. Development releases are marked as prereleases and do not replace the stable download.
+Packages include a **universal app for Apple Silicon and Intel**, available as a DMG or ZIP, plus SHA-256 checksums. Open the DMG and drag **AppleBlox Native** into Applications, or extract the ZIP and move the app there.
 
-The automated packages are currently ad-hoc signed, without Apple notarization. Signing with a Developer ID and notarization are separate distribution work still to be configured.
+The app targets **macOS 14 or later**. Liquid Glass is used on macOS 26 and later, with material fallbacks on earlier versions. Intel and macOS 14 runtime testing are still outstanding. Builds are currently ad-hoc signed and **not Apple notarized**.
 
-## Native features
+## What’s in the native app
 
-- Compact launcher, saved games, per-game engine profiles, and diagnostics.
-- Engine flag presets and JSON import/export, with backup and restore.
-- Content and font mods, with resource validation and restore.
-- Roblox Player installation checks and updates.
-- Saved accounts backed by macOS Keychain.
-- Optional Discord presence, activity tracking, and local play history.
+| Feature | Included |
+| --- | --- |
+| Launcher | Roblox Player detection, saved games, per-game profiles, and diagnostics |
+| Interface | Compact navigation, Liquid Glass controls, native dialogs, and reduced-motion support |
+| Engine settings | Flag presets, validated JSON import/export, and backup/restore |
+| Content mods | Local texture, sound, and font packs, custom fonts, and original-resource restore |
+| Player updates | Roblox LIVE version checks and validated downloads with previous-app retention |
+| Accounts | Private website sign-in, explicit Player-login import, and Keychain-backed sessions |
+| Integrations | Optional Discord presence, local play history, and opt-in launch-link handling |
 
-See the [native documentation](native/README.md) for behavior, limitations, and features still awaiting live acceptance testing. Some original AppleBlox functionality remains to be ported. The inherited Svelte/Neutralino sources remain in this repository for reference; the release workflow builds the native application.
+This is an ongoing migration. The online mod workshop, server-region picker, game artwork/browser, and some original appearance preferences remain to be ported. Authenticated account switching and live Discord display still need acceptance testing. Roblox may ignore individual engine flags or restrict multiple instances.
 
-## Build locally
+The [native developer guide](https://github.com/Belligerently/appleblox-native/blob/swiftui-foundation/native/README.md) describes behavior, validation, and remaining work in detail.
 
-Requires macOS and Xcode with the macOS 26 SDK or later and Swift 6 support.
+## Build from source
+
+Use **full Xcode 27 or later**, including its macOS SDK and Swift toolchain. Standalone Command Line Tools are insufficient for the app’s SwiftUI macros. The native app has no third-party Swift package dependencies and does not require Bun or Node.js.
 
 ```sh
-cd native
-bash test.sh
-bash build.sh
-open 'dist/AppleBlox Native.app'
+git clone --branch swiftui-foundation https://github.com/Belligerently/appleblox-native.git
+cd appleblox-native
+bash native/test.sh
+bash native/build.sh
+open 'native/dist/AppleBlox Native.app'
 ```
 
-For the same universal application used in CI:
+To produce a universal app from the repository root:
 
 ```sh
 APPLEBLOX_UNIVERSAL=1 bash native/build.sh
 ```
 
-Run that command from the repository root. No third-party Swift packages are required.
+You can also open `native/Package.swift` in Xcode. The scripts select full Xcode when standalone Command Line Tools are active; set `DEVELOPER_DIR` to use another Xcode installation.
 
-## Automatic releases
+## Releases and versions
 
-Every branch push is inspected for native app changes. Each qualifying commit is tested, built, packaged, and released:
+App-related pushes are tested and built automatically. Each successful app commit produces a release with versioned ZIP/DMG assets and checksums:
 
-- `main`: **0.1.0**, **0.1.1**, **0.1.2**, …
-- Other branches: **0.1.0-dev.1**, **0.1.0-dev.2**, … before the first stable release. After 0.1.0, development builds target **0.1.1-dev.1**, and so on.
-- Native sources, tests, resources, build scripts, the release automation, and `LICENSE` count as app changes. Markdown-only and legacy web-app changes do not publish releases.
-- Multiple app commits in a push are processed individually. Merge commits are compared with their first parent; merged branch history is not replayed by a merge commit.
-- A failed commit does not publish a release; other commits in that push are still attempted. Rerunning the failed job retries incomplete builds and skips already published commit/channel pairs.
-- Native tags use `native-v0.1.0` and `native-v0.1.0-dev.1`, keeping upstream tags separate. Version metadata is stamped into the packaged app, without bot commits.
+- **`main`:** stable versions `0.1.0`, `0.1.1`, `0.1.2`, … once the native app and workflow are merged.
+- **Other branches:** prereleases such as `0.1.0-dev.1`, `0.1.0-dev.2`, … advancing toward the next stable patch.
+- **Documentation-only changes:** no native release.
 
-The [release guide](.github/RELEASING.md) covers setup and version policy.
+Native tags use the `native-v` prefix to keep this fork’s history separate from upstream. Release versions are written into the packaged app; the inherited `package.json` version belongs to the legacy application. See the [release guide](https://github.com/Belligerently/appleblox-native/blob/swiftui-foundation/.github/RELEASING.md) for retries, commit selection, and signing details.
 
-## Attribution
+## Data and integrations
 
-AppleBlox Native retains the [GPL-3.0 license](LICENSE). Credit to AppleBlox and its contributors, @typeofnull for the original logo, and [Bloxstrap](https://github.com/pizzaboxer/bloxstrap) for the original project's inspiration. This fork is an independent project.
+Settings, imported mods, backups, and optional play history are stored locally. Saved Roblox sessions use macOS Keychain. Sign-in, game metadata, and Player updates contact Roblox services; enabling Discord presence shares the current game name and public game link with Discord. The native guide documents where data is stored and how optional features work.
+
+## Contributing
+
+Use this fork’s [pull requests](https://github.com/Belligerently/appleblox-native/pulls) for fixes and contributions. For bugs, include your macOS version, Mac architecture, app version, reproduction steps, and relevant diagnostics. Remove account/session information from anything you share.
+
+The native implementation is in `native/`; `frontend/` and `scripts/` contain the inherited Svelte/Neutralino application. See [the legacy notes](docs/LEGACY.md) when working on that code.
+
+## Credits and license
+
+AppleBlox Native retains the [GPL-3.0 license](LICENSE) and the work of **AppleBlox and its contributors**. Original logo by **@typeofnull**; the rose body and blue leaf adapt that mark for this fork. [Bloxstrap](https://github.com/pizzaboxer/bloxstrap) inspired the original project.
+
+This is an independent fork, not an official AppleBlox release. Original project resources and legacy component credits are preserved in the [legacy notes](docs/LEGACY.md).
