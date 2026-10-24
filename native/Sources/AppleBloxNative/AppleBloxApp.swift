@@ -6,7 +6,7 @@ struct AppleBloxApp: App {
     @State private var model = LauncherModel()
 
     init() {
-        if let url = Bundle.main.url(forResource: "AppIcon-BlueLeaf-Dark", withExtension: "icns"),
+        if let url = Bundle.main.url(forResource: "AppIcon-BlueLeaf-Charcoal", withExtension: "icns"),
            let icon = NSImage(contentsOf: url) {
             NSApplication.shared.applicationIconImage = icon
         }
@@ -25,7 +25,7 @@ struct AppleBloxApp: App {
             CommandMenu("Roblox") {
                 Button("Launch Roblox") { Task { await model.launch() } }
                     .keyboardShortcut("r", modifiers: .command)
-                    .disabled(model.installation == nil || model.isLaunching)
+                    .disabled(model.installation == nil || model.isBusy)
                 Button("Refresh Installation", action: model.refresh)
                 Button("Choose Installation…", action: model.chooseInstallation)
             }

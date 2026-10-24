@@ -1,0 +1,196 @@
+import AppKit
+import AppleBloxCore
+import SwiftUI
+import UniformTypeIdentifiers
+
+private struct EngineDraft: Identifiable {
+    var id: UUID { profile.id }
+    let profile: EngineProfile
+}
+
+struct EngineView: View {
+    let model: LauncherModel
+    @State private var draft: EngineDraft?
+    @State private var confirmRestore = false
+    @State private var confirmDelete = false
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var profile: EngineProfile? { model.configuration.engine.selectedProfile }
+    private var busy: Bool { model.isBusy }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                PageHeading(title: "Engine", subtitle: "Graphics and FastFlags, saved in profiles.")
+                Menu {
+                    Button("New Profile…", systemImage: "plus") { draft = EngineDraft(profile: EngineProfile(name: "New Profile")) }
+                    Button("Import JSON…", systemImage: "square.and.arrow.down", action: importProfile)
+                    Divider()
+                    Button("Export Flags…", systemImage: "square.and.arrow.up", action: model.exportEngineProfile)
+                    Button("Delete Profile…", role: .destructive) { confirmDelete = true }
+                        .disabled(model.configuration.engine.profiles.count < 2)
+                } label: { Image(systemName: "ellipsis.circle").font(.title3) }
+                .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Engine profile actions")
+                .disabled(!model.canSave || busy)
+            }
+            HStack {
+                Picker("Profile", selection: Binding(get: { model.configuration.engine.selectedProfileID }, set: model.selectEngineProfile)) {
+                    ForEach(model.configuration.engine.profiles) { Text($0.name).tag($0.id) }
+                }
+                .labelsHidden().accessibilityLabel("Engine profile").frame(maxWidth: .infinity)
+                Button("Edit…", systemImage: "slider.horizontal.3") {
+                    if let profile { draft = EngineDraft(profile: profile) }
+                }
+            }
+            .disabled(!model.canSave || busy)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    if let profile {
+                        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
+                            GridRow {
+                                EngineSummaryField(title: "Renderer", value: profile.renderer.title)
+                                EngineSummaryField(title: "Quality", value: profile.graphicsQuality.map(String.init) ?? "Default")
+                                EngineSummaryField(title: "Textures", value: profile.textureQuality.map { "Level \($0)" } ?? "Default")
+                            }
+                            GridRow {
+                                EngineSummaryField(title: "Full resolution", value: profile.fullResolution ? "On" : "Default")
+                                EngineSummaryField(title: "Gray sky", value: profile.graySky ? "On" : "Default")
+                                EngineSummaryField(title: "Custom flags", value: "\(profile.customFlags.count)")
+                            }
+                        }
+                        .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(AppleBloxTheme.card(for: colorScheme).opacity(0.75), in: .rect(cornerRadius: 14))
+                    }
+                    Toggle("Apply selected profile before launch", isOn: Binding(
+                        get: { model.configuration.engine.applyOnLaunch }, set: model.setApplyEngineOnLaunch
+                    ))
+                    .controlSize(.small).disabled(!model.canSave || busy)
+                    Text("Apply replaces ClientAppSettings.json and backs up the original. Quit Roblox first; client updates may reset it.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .scrollIndicators(.automatic)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Button {
+                        Task { await model.applyEngineProfile() }
+                    } label: {
+                        Label(model.isApplyingEngine ? "Working…" : "Apply Now", systemImage: "checkmark.circle")
+                    }
+                    .launchButtonStyle()
+                    .disabled(!model.canSave || busy || model.isRunning || model.installation == nil)
+                    Button("Restore Original…") { confirmRestore = true }
+                        .disabled(!model.canSave || busy || model.isRunning || !model.hasEngineBackup)
+                    Spacer()
+                    if model.hasEngineBackup { Image(systemName: "externaldrive.badge.checkmark").help("Original settings backed up") }
+                }
+                Text(model.isRunning ? "Quit Roblox to apply or restore settings." : model.engineStatus)
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .controlSize(.small)
+        }
+        .sheet(item: $draft) { EngineProfileEditor(model: model, profile: $0.profile) }
+        .confirmationDialog("Restore the original Roblox settings?", isPresented: $confirmRestore, titleVisibility: .visible) {
+            Button("Restore Original") { Task { await model.restoreEngineSettings() } }
+        } message: { Text("This restores the file from before the first Apply and turns off Apply on launch. Your profiles are kept.") }
+        .confirmationDialog("Delete this engine profile?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete Profile", role: .destructive) { if let profile { model.removeEngineProfile(profile) } }
+        } message: { Text("This removes the saved profile. Settings already applied to Roblox stay in place until you apply another profile or restore.") }
+    }
+
+    private func importProfile() {
+        let panel = NSOpenPanel()
+        panel.title = "Import FastFlags JSON"
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            guard (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) <= 1_048_576 else { throw EngineError.fileTooLarge }
+            var imported = EngineProfile(name: url.deletingPathExtension().lastPathComponent)
+            imported.customFlags = try FastFlags.parse(String(contentsOf: url, encoding: .utf8))
+            draft = EngineDraft(profile: imported)
+        } catch { model.errorMessage = error.localizedDescription }
+    }
+}
+
+private struct EngineSummaryField: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.system(size: 10)).foregroundStyle(.secondary)
+            Text(value).font(.system(size: 12, weight: .medium)).lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct EngineProfileEditor: View {
+    let model: LauncherModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var profile: EngineProfile
+    @State private var flagsJSON: String
+    @State private var message: String?
+    @State private var showAdvanced = false
+
+    init(model: LauncherModel, profile: EngineProfile) {
+        self.model = model
+        // A sheet owns an editable snapshot; Save commits it, Cancel discards it.
+        self.profile = profile
+        self.flagsJSON = (try? FastFlags.json(profile.customFlags)) ?? "{}"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Engine Profile").font(.title2.weight(.semibold))
+            Form {
+                Section {
+                    TextField("Name", text: $profile.name)
+                    Picker("Graphics API", selection: $profile.renderer) {
+                        ForEach(GraphicsRenderer.allCases) { Text($0.title).tag($0) }
+                    }
+                    Picker("Graphics quality", selection: $profile.graphicsQuality) {
+                        Text("Roblox default").tag(Int?.none)
+                        ForEach(1...21, id: \.self) { Text("Level \($0)").tag(Optional($0)) }
+                    }
+                    Picker("Texture quality", selection: $profile.textureQuality) {
+                        Text("Roblox default").tag(Int?.none)
+                        ForEach(0...3, id: \.self) { Text("Level \($0)").tag(Optional($0)) }
+                    }
+                    Toggle("Full resolution with fractional scaling", isOn: $profile.fullResolution)
+                    Toggle("Simple gray sky", isOn: $profile.graySky)
+                }
+                Section {
+                    DisclosureGroup("Custom FastFlags JSON", isExpanded: $showAdvanced) {
+                        TextEditor(text: $flagsJSON)
+                            .font(.system(.caption, design: .monospaced))
+                            .frame(minHeight: 110)
+                            .scrollContentBackground(.hidden)
+                            .accessibilityLabel("Custom FastFlags JSON")
+                        Text("Custom values override the presets above. Accepts the original AppleBlox local-client allowlist; unsupported keys are rejected. Roblox may ignore flags depending on its version.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .formStyle(.grouped).controlSize(.small).scrollContentBackground(.hidden)
+            .contentMargins(.horizontal, 0, for: .scrollContent)
+            if let message { Text(message).font(.callout).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true) }
+            HStack {
+                Text("Saved profiles take effect when applied.").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Save Profile") {
+                    do {
+                        profile.customFlags = try FastFlags.parse(flagsJSON)
+                        try model.saveEngineProfile(profile)
+                        dismiss()
+                    } catch { message = error.localizedDescription }
+                }
+                .launchButtonStyle().keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20).frame(width: 470, height: showAdvanced ? 590 : 430)
+    }
+}

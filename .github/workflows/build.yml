@@ -1,203 +1,72 @@
-name: Build and Create PKG
+name: Native build and release
 
 on:
   push:
-    branches: [main, dev]
+    branches: ['**']
   pull_request:
-    types: [opened, synchronize]
-    branches: [main, dev]
+    paths:
+      - 'native/**'
+      - '.github/scripts/**'
+      - '.github/workflows/build.yml'
+      - 'LICENSE'
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+permissions:
+  contents: read
 
+# No cancel-in-progress group: a later push must not discard an earlier release.
 jobs:
-  build:
-    runs-on: macos-26
-    outputs:
-      version: ${{ env.VERSION }}
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Check macOS Version
-        id: macos_version
-        run: |
-          MACOS_VERSION=$(sw_vers -productVersion | cut -d. -f1)
-          echo "version=$MACOS_VERSION" >> $GITHUB_OUTPUT
-          echo "Running on macOS $MACOS_VERSION"
-
-          if [ "$MACOS_VERSION" -ge 26 ]; then
-            echo "macOS 26+ detected - Liquid Glass icons will be compiled"
-          else
-            echo "macOS < 26 detected - will use traditional .icns icons"
-          fi
-
-      - name: Setup Xcode (macOS 26+)
-        if: steps.macos_version.outputs.version >= '26'
-        run: |
-          # Select Xcode 26 for Liquid Glass icon compilation
-          sudo xcode-select -s /Applications/Xcode.app
-          xcodebuild -version
-          echo "Xcode configured for Liquid Glass asset compilation"
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install Dependencies
-        run: bun install
-        continue-on-error: false
-
-      - name: Run tests
-        run: bun test
-        continue-on-error: false
-
-      - name: Build and package app
-        run: bun run release:sequential
-        continue-on-error: false
-
-      - name: Get version from package.json
-        id: get_version
-        run: |
-          if [ -f "package.json" ]; then
-            echo "VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
-          else
-            echo "Error: package.json not found"
-            exit 1
-          fi
-
-      - name: Verify build artifacts exist
-        run: |
-          for arch in x64 universal arm64; do
-            if [ ! -f "dist/AppleBlox-${arch}-${VERSION}.pkg" ]; then
-              echo "Error: PKG file for ${arch} not found"
-              exit 1
-            fi
-            if [ ! -f "dist/AppleBlox-${VERSION}_${arch}.dmg" ]; then
-              echo "Error: DMG file for ${arch} not found"
-              exit 1
-            fi
-          done
-
-      - name: Upload (mac_x64)
-        uses: actions/upload-artifact@v4
-        with:
-          name: AppleBlox-x64-${{ env.VERSION }}.pkg
-          path: dist/AppleBlox-x64-${{ env.VERSION }}.pkg
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Upload (mac_universal)
-        uses: actions/upload-artifact@v4
-        with:
-          name: AppleBlox-universal-${{ env.VERSION }}.pkg
-          path: dist/AppleBlox-universal-${{ env.VERSION }}.pkg
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Upload (mac_arm64)
-        uses: actions/upload-artifact@v4
-        with:
-          name: AppleBlox-arm64-${{ env.VERSION }}.pkg
-          path: dist/AppleBlox-arm64-${{ env.VERSION }}.pkg
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Upload DMG (mac_x64)
-        uses: actions/upload-artifact@v4
-        with:
-          name: AppleBlox-${{ env.VERSION }}_x64.dmg
-          path: dist/AppleBlox-${{ env.VERSION }}_x64.dmg
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Upload DMG (mac_universal)
-        uses: actions/upload-artifact@v4
-        with:
-          name: AppleBlox-${{ env.VERSION }}_universal.dmg
-          path: dist/AppleBlox-${{ env.VERSION }}_universal.dmg
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Upload DMG (mac_arm64)
-        uses: actions/upload-artifact@v4
-        with:
-          name: AppleBlox-${{ env.VERSION }}_arm64.dmg
-          path: dist/AppleBlox-${{ env.VERSION }}_arm64.dmg
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Build Summary
-        if: always()
-        run: |
-          echo "### Build Results 📦" >> $GITHUB_STEP_SUMMARY
-          echo "Version: ${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
-          if ls .tmpbuild/mac_*/AppleBlox.app/Contents/Resources/Assets.car 1> /dev/null 2>&1; then
-            echo "- [x] Liquid Glass Icons" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "- [] Liquid Glass Icons" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### PKG Files" >> $GITHUB_STEP_SUMMARY
-          echo "- x64 PKG: $(ls -lh dist/AppleBlox-x64-${VERSION}.pkg 2>/dev/null || echo 'Not built')" >> $GITHUB_STEP_SUMMARY
-          echo "- Universal PKG: $(ls -lh dist/AppleBlox-universal-${VERSION}.pkg 2>/dev/null || echo 'Not built')" >> $GITHUB_STEP_SUMMARY
-          echo "- ARM64 PKG: $(ls -lh dist/AppleBlox-arm64-${VERSION}.pkg 2>/dev/null || echo 'Not built')" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### DMG Wrappers (for 0.8.x updater compatibility)" >> $GITHUB_STEP_SUMMARY
-          echo "- x64 DMG: $(ls -lh dist/AppleBlox-${VERSION}_x64.dmg 2>/dev/null || echo 'Not built')" >> $GITHUB_STEP_SUMMARY
-          echo "- Universal DMG: $(ls -lh dist/AppleBlox-${VERSION}_universal.dmg 2>/dev/null || echo 'Not built')" >> $GITHUB_STEP_SUMMARY
-          echo "- ARM64 DMG: $(ls -lh dist/AppleBlox-${VERSION}_arm64.dmg 2>/dev/null || echo 'Not built')" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### Icon Support" >> $GITHUB_STEP_SUMMARY
-          echo "- macOS Version: ${{ steps.macos_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-
-  create-release:
-    needs: build
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+  plan:
+    if: github.event_name != 'push' || github.event.deleted == false
     runs-on: ubuntu-latest
+    outputs:
+      commits: ${{ steps.plan.outputs.commits }}
+      has_commits: ${{ steps.plan.outputs.has_commits }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test release automation
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
+      - name: Select app commits
+        id: plan
+        run: python3 .github/scripts/native_release.py plan
+
+  validate:
+    if: github.event_name == 'pull_request'
+    needs: plan
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: bash native/test.sh
+      - name: Build universal application
+        run: APPLEBLOX_UNIVERSAL=1 bash native/build.sh
+
+  release:
+    if: github.event_name != 'pull_request' && needs.plan.outputs.has_commits == 'true'
+    needs: plan
+    runs-on: macos-26
+    timeout-minutes: 360
     permissions:
       contents: write
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
-          fetch-depth: 0  # This ensures we fetch all history and tags
-
-      - name: Get previous tag
-        run: |
-          echo "PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo '')" >> $GITHUB_ENV
-
-      - name: Generate commit history
-        run: |
-          if [ -n "${{ env.PREVIOUS_TAG }}" ]; then
-            echo "### Commits since ${{ env.PREVIOUS_TAG }}" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            git log --pretty=format:"- [%h](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/%H) %s" ${{ env.PREVIOUS_TAG }}..HEAD >> CHANGELOG.md
-          else
-            echo "### Initial Release" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            git log --pretty=format:"- [%h](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/%H) %s" >> CHANGELOG.md
-          fi
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./artifacts
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          name: Release ${{ needs.build.outputs.version }}
-          tag_name: ${{ needs.build.outputs.version }}
-          draft: true
-          files: |
-            ./artifacts/AppleBlox-*/*.pkg
-            ./artifacts/AppleBlox-*/*.dmg
-          generate_release_notes: true
-          body_path: CHANGELOG.md
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test, build, and publish each app commit
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_COMMITS: ${{ needs.plan.outputs.commits }}
+        run: python3 .github/scripts/native_release.py release
+      - name: Keep release packages on failed runs too
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-release-packages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-packages/
+          if-no-files-found: ignore
+          retention-days: 14

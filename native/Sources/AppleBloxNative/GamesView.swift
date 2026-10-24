@@ -41,7 +41,7 @@ struct GamesView: View {
                         }
                         Spacer()
                         Button("Play", systemImage: "play.fill") { Task { await model.launch(shortcut: shortcut) } }
-                            .disabled(model.installation == nil || model.isLaunching)
+                            .disabled(model.installation == nil || model.isBusy)
                         Menu {
                             Button("Edit…") { draft = ShortcutDraft(shortcut: shortcut) }
                             Button("Remove", role: .destructive) { model.removeShortcut(shortcut) }
@@ -71,6 +71,7 @@ private struct ShortcutEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var placeID: String
+    @State private var engineProfileID: UUID?
     @State private var validationMessage: String?
 
     init(model: LauncherModel, shortcut: GameShortcut?) {
@@ -79,6 +80,7 @@ private struct ShortcutEditor: View {
         // These inputs seed the editor's local draft once per sheet presentation.
         self.name = shortcut?.name ?? ""
         self.placeID = shortcut?.placeID ?? ""
+        self.engineProfileID = shortcut?.engineProfileID
     }
 
     var body: some View {
@@ -87,6 +89,10 @@ private struct ShortcutEditor: View {
             Form {
                 TextField("Name", text: $name)
                 TextField("Place ID", text: $placeID)
+                Picker("Engine profile", selection: $engineProfileID) {
+                    Text("Use selected global profile").tag(UUID?.none)
+                    ForEach(model.configuration.engine.profiles) { Text($0.name).tag(Optional($0.id)) }
+                }
             }
             Text("In roblox.com/games/123456789/Game-Name, the place ID is 123456789.")
                 .font(.callout).foregroundStyle(.secondary)
@@ -99,7 +105,7 @@ private struct ShortcutEditor: View {
                 Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("Save Game") {
                     do {
-                        try model.saveShortcut(id: shortcut?.id, name: name, placeID: placeID)
+                        try model.saveShortcut(id: shortcut?.id, name: name, placeID: placeID, engineProfileID: engineProfileID)
                         dismiss()
                     } catch { validationMessage = error.localizedDescription }
                 }

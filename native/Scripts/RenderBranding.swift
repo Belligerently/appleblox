@@ -29,21 +29,26 @@ struct RenderBranding {
         context.translateBy(x: 0, y: size.height)
         context.scaleBy(x: 1, y: -1)
         if tile {
-            let inset = size.width * 0.035
+            // Match the system icon's 80% tile footprint within the icon canvas.
+            let inset = size.width * 0.10
             let rect = CGRect(x: inset, y: inset, width: size.width - 2 * inset, height: size.height - 2 * inset)
-            let shape = CGPath(roundedRect: rect, cornerWidth: size.width * 0.205, cornerHeight: size.height * 0.205, transform: nil)
+            let shape = CGPath(roundedRect: rect, cornerWidth: size.width * 0.18, cornerHeight: size.height * 0.18, transform: nil)
             context.saveGState()
             context.addPath(shape)
             context.clip()
-            let gradient = CGGradient(colorsSpace: space, colors: [CGColor(gray: 0.12, alpha: 1), CGColor(gray: 0.055, alpha: 1)] as CFArray, locations: [0, 1])!
-            context.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: size.width, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+            // Sampled from the Claude dark icon: charcoal at the top, near-black below.
+            // Use RGB components to avoid grayscale-to-RGB gamma conversion.
+            let top = CGColor(colorSpace: space, components: [44 / 255, 44 / 255, 44 / 255, 1])!
+            let bottom = CGColor(colorSpace: space, components: [17 / 255, 17 / 255, 17 / 255, 1])!
+            let gradient = CGGradient(colorsSpace: space, colors: [top, bottom] as CFArray, locations: [0, 1])!
+            context.drawLinearGradient(gradient, start: CGPoint(x: size.width / 2, y: inset), end: CGPoint(x: size.width / 2, y: size.height - inset), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
             context.restoreGState()
             context.addPath(shape)
-            context.setStrokeColor(CGColor(gray: 1, alpha: 0.12))
+            context.setStrokeColor(CGColor(gray: 1, alpha: 0.10))
             context.setLineWidth(max(0.5, size.width / 512))
             context.strokePath()
         }
-        let scale = min(size.width / 408, size.height / 434) * (tile ? 0.73 : 0.96)
+        let scale = min(size.width / 408, size.height / 434) * (tile ? 0.60 : 0.96)
         context.translateBy(x: (size.width - 408 * scale) / 2, y: (size.height - 434 * scale) / 2)
         context.scaleBy(x: scale, y: scale)
         let gradient = CGGradient(colorsSpace: space,

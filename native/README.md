@@ -4,7 +4,7 @@ A native macOS 14+ app developed inside the AppleBlox fork. The original Svelte/
 
 ## Build and run
 
-Requires macOS 14+ and Xcode with a Swift 6 toolchain. No third-party Swift dependencies. The scripts prefer `/Applications/Xcode.app` when standalone Command Line Tools are selected, without changing the system selection. Override with `DEVELOPER_DIR` if needed. Current SDK 27 Command Line Tools omit the SwiftUI macro plugin needed by `@State`.
+Requires macOS and Xcode with the macOS 26 SDK or later and a Swift 6 toolchain. The resulting app supports macOS 14+. No third-party Swift dependencies. The scripts prefer `/Applications/Xcode.app` when standalone Command Line Tools are selected, without changing the system selection. Override with `DEVELOPER_DIR` if needed. Current SDK 27 Command Line Tools omit the SwiftUI macro plugin needed by `@State`.
 
 ```sh
 cd native
@@ -22,7 +22,7 @@ Swift language mode is explicitly 6, with complete concurrency checking. There i
 
 ## Compact Liquid Glass interface
 
-The default window is 660 × 460 points (minimum 580 × 390), with top navigation instead of a sidebar. On macOS 26+, navigation and launch controls use native Liquid Glass. Earlier systems use material and bordered-control fallbacks. The window uses native translucency on macOS 15+ and respects Reduce Transparency and Reduce Motion. Game rows, editing sheets, installation details, and diagnostics use compact spacing.
+The default window is 660 × 460 points (minimum 580 × 390), with top navigation for Launcher, My Games, Engine, and Mods, plus a More menu for Accounts, Integrations, History, Installation, Diagnostics, and About instead of a sidebar. On macOS 26+, navigation and launch controls use native Liquid Glass. Earlier systems use material and bordered-control fallbacks. The window uses native translucency on macOS 15+ and respects Reduce Transparency and Reduce Motion. Game rows, editing sheets, installation details, and diagnostics use compact spacing.
 
 The native palette is derived directly from `frontend/src/theme.css`: rose primary `hsl(346.19, 64.65%, 42.16%)` (`#B12646`), neutral backgrounds (`#171717` / `#E6E6E6`), and the original card and foreground colors. Glass retains some translucency, so composited window pixels vary with the desktop.
 
@@ -43,26 +43,47 @@ The original AppleBlox geometry is preserved exactly: tilted square, square open
 - Validate the exact Player bundle identifier and executable, excluding Studio.
 - Open Roblox, with an error alert if the installation disappears or Launch Services rejects the request.
 - Create, edit, and remove saved game shortcuts using a numeric place ID. Play sends a deep link to the selected Player; joining depends on Roblox authentication and game availability.
-- Inspect the detected version/path, reveal the app, open Roblox logs, and read session activity.
+- Inspect the detected version/path, reveal the app, open Roblox logs, and read session activity. Running status follows workspace launch/termination notifications; Quit Roblox requests a graceful exit from Player windows.
+- Create, edit, select, delete, import, and export named engine profiles. Presets cover automatic/Metal/OpenGL rendering, graphics quality, textures, fractional-scaling resolution, and gray sky. Custom JSON overrides presets and validates keys/types against the inherited AppleBlox local-client allowlist. Roblox may ignore flags depending on client version.
+- Apply a profile now or opt into applying it before launch. Applying requires Roblox to be closed and replaces `Contents/MacOS/ClientSettings/ClientAppSettings.json`. The actor-backed file service stores the exact original bytes (or original absence) in `engine-backups/` before writing. Repeated applies preserve that original. Restore returns to those bytes and disables automatic application. Outside edits, symlinks, and corrupt backups block changes instead of being overwritten. File permission errors are surfaced; the app does not request administrator privileges.
 - Save validated settings atomically. Invalid existing settings are preserved and block saving until moved aside and the app restarted.
 
-Native settings live in `~/Library/Application Support/AppleBlox Native/native-settings.json`. Set `APPLEBLOX_NATIVE_DATA_DIR` to isolate test/demo data. Legacy AppleBlox settings are not imported yet.
+Native settings live in `~/Library/Application Support/AppleBlox Native/native-settings.json`. Set `APPLEBLOX_NATIVE_DATA_DIR` to isolate test/demo data. Original AppleBlox engine-profile JSON files can be imported from Integrations. Other legacy preference panels are not automatically migrated.
+
+## Additional native features (0.3.0)
+
+- **Content mods:** Import resource folders beginning with `content/`, `PlatformContent/`, or `ExtraContent/`. Toggle individual packs, apply explicitly or before fresh launches, and restore original resources. Textures, sounds, fonts, and JSON are supported; meshes, scripts, executables, symlinks, and conflicting replacements are rejected. Apply stages a complete resource tree and rolls back a failed replacement. Resource digests detect outside edits or a changed backup. Removed library entries keep their imported files in the Mods folder for recovery.
+- **Custom fonts:** Select a TTF/OTF font to build a mod that rewrites Roblox font-family asset references while preserving face weights/styles. Apply it through Mods. Enable only one font pack at a time.
+- **Roblox updates:** Check Roblox LIVE, download the architecture-specific Player archive, validate archive paths, reject symlinks, verify the exact Player version and Roblox signing team, then replace the selected installation. The previous application is retained beside the new one. Old engine/mod backups are archived instead of reused for a different installation. Downloads can be cancelled. Optional automatic checks/installations run hourly while AppleBlox is open and Player is closed; no LaunchAgent is installed. There is no Studio/channel/version-pinning UI.
+- **Accounts:** Sign in directly through a private Roblox website view (native WebView on macOS 26+, WKWebView fallback on earlier systems), or explicitly import Player’s current login. Sessions are validated with Roblox and stored in macOS Keychain, separately from public account metadata. Selecting an account and launching while Player is closed writes its session to Player’s CFNetwork cookie file with mode 0600; the original login is backed up in Keychain for restore. Credentials are never placed in command arguments, diagnostics, JSON settings, or history. Restoring/removing a local session does not revoke sessions on other devices. Real authenticated switching still needs user acceptance testing.
+- **Discord presence:** Opt-in native Unix-socket IPC, using the original AppleBlox application ID by default (editable for fork branding). Handles handshake, ping/pong, acknowledgment, reconnection, and clearing on quit/disable. Publishes the current game name and public game-page link. Discord desktop must be running; no Discord token is collected. Live display still needs acceptance testing with a running Discord client.
+- **Activity/history:** Opt-in log tailing detects new joins, returns to the desktop app, and log rotation. Stores up to 200 local sessions, with game names resolved through public Roblox endpoints. History can replay saved place IDs. Existing log lines are ignored at the initial baseline; credentials, raw log lines, server IPs, and job IDs are not recorded. Optional quit-after-game behavior requests a graceful Player exit.
+- **Launch links:** The bundle advertises `appleblox-native://play?placeId=…`, `roblox`, and `roblox-player` schemes. Roblox schemes have alternate handler rank; use Integrations to explicitly choose AppleBlox or Roblox as the default through the macOS NSWorkspace API. Incoming requests require review and forward directly to the selected Player bundle, preventing a handler loop. Tokens in browser launch URLs are not logged.
+- **Game profiles/migration:** Assign an engine profile to each saved game. It applies before a fresh Player session even when global automatic application is off; an already-running Player needs a restart to pick up changed flags. Import one or more original AppleBlox profile-wrapper JSON files, including game mappings. The import is all-or-nothing for native settings and rejects enabled unsupported flags.
+- **Instances:** An optional macOS new-application-instance request is available. Roblox can still enforce its own single-instance rules, and processes share the same Player login. No semaphore bypass or private display API is used.
+
+The native app does not yet reproduce the original online mod workshop, server-region picker, game artwork/browser, custom icon-color presets, background updating while AppleBlox is quit, or all legacy appearance/preferences. Multi-instance behavior and FastFlag effects remain subject to the Roblox client. This is a functional native migration preview, not complete one-for-one parity with every original panel.
 
 ## Migration map
 
-| Existing source | Native equivalent / next step |
+| Existing source | Native implementation |
 | --- | --- |
-| `roblox/path.ts`, `path-manager.ts` | `AppleBloxCore/RobloxInstallation.swift`, `LauncherModel.refresh()` |
-| `roblox/instance.ts` launch via `open -a` | `LauncherModel.launch()` using NSWorkspace |
-| Svelte main window | Compact SwiftUI navigation, Liquid Glass controls, and native forms |
-| File-backed settings | Separate typed JSON store with validation and atomic saves |
-| `roblox/fflags.ts`, `mods.ts` | Pending: supported settings, backup and restore |
-| `roblox/downloader.ts`, `updates.ts` | Pending: installation/update lifecycle |
-| `tools/rpc.ts`, `roblox/events/` | Pending: presence and event tracking |
-| `roblox/delegate.ts`, bootstrap sidecar | Pending: URL registration/delegation; this preview does not claim Roblox URL schemes |
-
-This is the first working slice of the migration. FastFlags, mods, automatic updates, multi-instance support, account management, Discord presence, and external deep-link interception are not implemented. Game shortcuts are not engine-setting profiles. Running status refreshes manually. The native app does not edit the Roblox bundle or install anything.
+| `roblox/path.ts`, `path-manager.ts` | `RobloxInstallation.swift`, `LauncherModel.refresh()` |
+| `roblox/instance.ts` | NSWorkspace launching, running notifications, optional new-instance requests |
+| `roblox/fflags.ts` | Engine profiles, presets, allowlist validation, JSON import/export, backup/restore |
+| `roblox/mods.ts` | `ContentMods.swift`, Mods UI, custom font generation, transactional resource replacement |
+| `roblox/downloader.ts`, `updates.ts` | `RobloxUpdates.swift`, signature-verified install and in-app automatic updates |
+| `roblox/accounts.ts`, `tools/binarycookies.ts` | `AccountVault.swift`, `PlayerCookies.swift`, private web sign-in |
+| `tools/rpc.ts`, `roblox/events/` | `DiscordPresence.swift`, `GameActivity.swift`, local play history |
+| `roblox/delegate.ts` | Opt-in NSWorkspace scheme handling and reviewed direct URL forwarding |
+| Legacy engine-profile files | `LegacyEngineProfile`, Integrations import, per-game profile bindings |
 
 ## Verification
 
-Core tests cover numeric ID validation, settings round trips, corrupt/unsupported settings, duplicate IDs, non-destructive validation failures, app bundle validation, and isolated data directories. UI and Launch Services behavior should also be checked on macOS with an installed Roblox Player. Do not use Roblox credentials or authentication tickets in test fixtures.
+`bash test.sh` runs 26 tests covering the original configuration/installation checks plus engine validation and recovery, mod transactions/conflicts/outside edits/symlinks, custom font-family rewrites, legacy profiles, game mappings, release/archive validation, binary cookie encoding/decoding with synthetic credentials, log tailing/rotation, ordered history persistence, and a local mock Discord IPC handshake/activity/ping exchange. No real account credentials, Keychain records, or installed Roblox resources are used in these tests.
+
+The public LIVE endpoint and a real architecture-specific Roblox archive have also been checked; the archive passed extraction, bundle/version validation, and Roblox signature validation in a temporary workspace. The install/replacement transaction and previous-app retention were verified using temporary fixture applications; no system/user Player installation was changed. UI checks cover compact navigation, account sign-in loading and missing-session validation, live version checking, mod import, and generation of a custom-font pack from real Player font definitions. Authenticated switching, real Discord display, browser-default changes, and simultaneous Player behavior require live user acceptance testing.
+
+## GitHub releases
+
+The fork is [Belligerently/appleblox-native](https://github.com/Belligerently/appleblox-native). App-related branch pushes build universal ZIP/DMG packages: stable versions on `main` start at `0.1.0`, while other branches publish `-dev.N` prereleases. See [the release guide](../.github/RELEASING.md) for commit selection, retries, versioning, and current signing limitations.

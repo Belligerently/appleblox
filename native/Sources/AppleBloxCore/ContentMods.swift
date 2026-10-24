@@ -1,0 +1,237 @@
+import CryptoKit
+import Foundation
+import CoreText
+
+public actor ContentModStore {
+    public let directory: URL
+    private let fm = FileManager.default
+    public init(directory: URL) { self.directory = directory }
+    private struct Manifest: Codable {
+        let installation: String
+        let version: String
+        let originalDigest: String
+        var appliedDigest: String
+    }
+
+    public func importFont(_ font: URL, installation: RobloxInstallation) throws -> ContentMod {
+        guard ["ttf", "otf"].contains(font.pathExtension.lowercased()),
+              try fm.attributesOfItem(atPath: font.path)[.type] as? FileAttributeType == .typeRegular,
+              let descriptors = CTFontManagerCreateFontDescriptorsFromURL(font as CFURL), CFArrayGetCount(descriptors) > 0 else {
+            throw FeatureError.message("Choose a valid TrueType or OpenType font.")
+        }
+        let installation = try RobloxInstallation.inspect(installation.url)
+        let workspace = directory.appendingPathComponent("font-import-\(UUID())")
+        defer { try? fm.removeItem(at: workspace) }
+        let fontRoot = workspace.appendingPathComponent("content/fonts")
+        let families = fontRoot.appendingPathComponent("families")
+        try fm.createDirectory(at: families, withIntermediateDirectories: true)
+        let filename = "AppleBlox-\(UUID().uuidString).\(font.pathExtension.lowercased())"
+        try fm.copyItem(at: font, to: fontRoot.appendingPathComponent(filename))
+        let originalFamilies = installation.url.appendingPathComponent("Contents/Resources/content/fonts/families")
+        try requireDirectory(originalFamilies)
+        var count = 0
+        for file in try fm.contentsOfDirectory(at: originalFamilies, includingPropertiesForKeys: nil) where file.pathExtension == "json" {
+            guard try fm.attributesOfItem(atPath: file.path)[.type] as? FileAttributeType == .typeRegular else { throw EngineError.unsafePath }
+            let data = try Self.fontFamily(Data(contentsOf: file), asset: "rbxasset://fonts/\(filename)")
+            try data.write(to: families.appendingPathComponent(file.lastPathComponent), options: .atomic)
+            count += 1
+        }
+        guard count > 0 else { throw FeatureError.message("This Player has no font family definitions to customize.") }
+        var mod = try importFolder(workspace)
+        mod.name = "Font: \(font.deletingPathExtension().lastPathComponent)"
+        return mod
+    }
+
+    static func fontFamily(_ data: Data, asset: String) throws -> Data {
+        guard var object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              var faces = object["faces"] as? [[String: Any]], !faces.isEmpty else {
+            throw FeatureError.message("A Roblox font family definition is unreadable.")
+        }
+        for index in faces.indices { faces[index]["assetId"] = asset }
+        object["faces"] = faces
+        return try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
+    }
+
+    public func importFolder(_ source: URL) throws -> ContentMod {
+        let files = try modFiles(source)
+        let mod = ContentMod(name: source.lastPathComponent, fileCount: files.count)
+        let target = directory.appendingPathComponent("packages/\(mod.id.uuidString)")
+        try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try fm.createDirectory(at: target, withIntermediateDirectories: false)
+        do {
+            for path in files {
+                let out = target.appendingPathComponent(path)
+                try fm.createDirectory(at: out.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try fm.copyItem(at: source.appendingPathComponent(path), to: out)
+            }
+        } catch { try? fm.removeItem(at: target); throw error }
+        return mod
+    }
+
+    public func hasBackup(_ installation: RobloxInstallation) -> Bool {
+        fm.fileExists(atPath: backupFolder(installation).appendingPathComponent("manifest.json").path)
+    }
+
+    public func archiveBackup(for installation: RobloxInstallation) throws {
+        let source = backupFolder(installation)
+        guard fm.fileExists(atPath: source.path) else { return }
+        let archive = directory.appendingPathComponent("previous-installations", isDirectory: true)
+        try fm.createDirectory(at: archive, withIntermediateDirectories: true)
+        try fm.moveItem(at: source, to: archive.appendingPathComponent(UUID().uuidString))
+    }
+
+    public func apply(_ mods: [ContentMod], to installation: RobloxInstallation) throws {
+        let installation = try RobloxInstallation.inspect(installation.url)
+        let resources = installation.url.appendingPathComponent("Contents/Resources")
+        try requireDirectory(resources)
+        let backup = backupFolder(installation)
+        let manifestURL = backup.appendingPathComponent("manifest.json")
+        let currentDigest = try digest(resources)
+        let manifest: Manifest
+        if fm.fileExists(atPath: manifestURL.path) {
+            let existing = try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: manifestURL))
+            guard existing.installation == installation.url.path, existing.version == installation.version,
+                  existing.appliedDigest == currentDigest,
+                  existing.originalDigest == (try digest(backup.appendingPathComponent("Resources"))) else { throw changedError }
+            manifest = existing
+        } else {
+            try fm.createDirectory(at: backup, withIntermediateDirectories: true)
+            let original = backup.appendingPathComponent("Resources")
+            // A prior interrupted backup is never treated as complete.
+            if fm.fileExists(atPath: original.path) { try fm.removeItem(at: original) }
+            try fm.copyItem(at: resources, to: original)
+            manifest = Manifest(installation: installation.url.path, version: installation.version, originalDigest: currentDigest, appliedDigest: currentDigest)
+            try JSONEncoder().encode(manifest).write(to: manifestURL, options: .atomic)
+        }
+        let stage = resources.deletingLastPathComponent().appendingPathComponent(".appleblox-mod-stage-\(UUID())")
+        defer { try? fm.removeItem(at: stage) }
+        try fm.copyItem(at: backup.appendingPathComponent("Resources"), to: stage)
+        var claimed = Set<String>()
+        for mod in mods where mod.enabled {
+            let package = directory.appendingPathComponent("packages/\(mod.id.uuidString)")
+            for path in try modFiles(package) {
+                guard claimed.insert(path.lowercased()).inserted else {
+                    throw FeatureError.message("Two enabled mods replace \(path). Disable one before applying.")
+                }
+                let target = stage.appendingPathComponent(path)
+                try checkParents(of: target, inside: stage)
+                try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                if fm.fileExists(atPath: target.path) { try fm.removeItem(at: target) }
+                try fm.copyItem(at: package.appendingPathComponent(path), to: target)
+            }
+        }
+        var next = manifest
+        next.appliedDigest = try digest(stage)
+        try replaceDirectory(resources, with: stage, manifestURL: manifestURL, manifest: JSONEncoder().encode(next))
+    }
+
+    public func restore(_ installation: RobloxInstallation) throws {
+        let installation = try RobloxInstallation.inspect(installation.url)
+        let resources = installation.url.appendingPathComponent("Contents/Resources")
+        let backup = backupFolder(installation)
+        let manifestURL = backup.appendingPathComponent("manifest.json")
+        let manifest = try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: manifestURL))
+        let original = backup.appendingPathComponent("Resources")
+        let current = try digest(resources)
+        let originalDigest = try digest(original)
+        guard manifest.installation == installation.url.path, manifest.version == installation.version,
+              originalDigest == manifest.originalDigest,
+              current == manifest.appliedDigest || current == originalDigest else { throw changedError }
+        let stage = resources.deletingLastPathComponent().appendingPathComponent(".appleblox-mod-restore-\(UUID())")
+        defer { try? fm.removeItem(at: stage) }
+        try fm.copyItem(at: original, to: stage)
+        try replaceDirectory(resources, with: stage, manifestURL: nil, manifest: nil)
+        try fm.removeItem(at: backup)
+    }
+
+    public func packageURL(_ mod: ContentMod) -> URL { directory.appendingPathComponent("packages/\(mod.id.uuidString)") }
+    public func backupsURL() -> URL { directory.appendingPathComponent("backups") }
+
+    private var changedError: FeatureError { .message("Roblox resources changed after the backup, possibly from an update. Nothing was overwritten. Keep the backup and use a fresh installation before reapplying mods.") }
+    private func backupFolder(_ installation: RobloxInstallation) -> URL {
+        let key = SHA256.hash(data: Data(installation.url.path.utf8)).map { String(format: "%02x", $0) }.joined()
+        return directory.appendingPathComponent("backups/\(key)")
+    }
+
+    private func requireDirectory(_ url: URL) throws {
+        guard try fm.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType == .typeDirectory else { throw EngineError.unsafePath }
+    }
+
+    private func modFiles(_ source: URL) throws -> [String] {
+        try requireDirectory(source)
+        let root = source.standardizedFileURL.resolvingSymlinksInPath()
+        guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles], errorHandler: { _, _ in false }) else { throw EngineError.unsafePath }
+        var result: [String] = []
+        var bytes = 0
+        let extensions: Set<String> = ["png", "jpg", "jpeg", "webp", "bmp", "tga", "dds", "ktx", "ktx2", "ogg", "mp3", "wav", "ttf", "otf", "json"]
+        for case let url as URL in enumerator {
+            let attributes = try fm.attributesOfItem(atPath: url.path)
+            let type = attributes[.type] as? FileAttributeType
+            guard type == .typeRegular || type == .typeDirectory else { throw EngineError.unsafePath }
+            if type == .typeDirectory { continue }
+            let path = try relativePath(url, inside: root)
+            guard ["content/", "PlatformContent/", "ExtraContent/"].contains(where: { path.hasPrefix($0) }), extensions.contains(url.pathExtension.lowercased()) else {
+                throw FeatureError.message("Unsupported mod file: \(path). Use textures, sounds, fonts, or JSON under content, PlatformContent, or ExtraContent.")
+            }
+            bytes += (attributes[.size] as? NSNumber)?.intValue ?? 0
+            guard bytes <= 536_870_912, result.count < 10_000 else { throw FeatureError.message("A mod must contain at most 10,000 files and 512 MB of content.") }
+            result.append(path)
+        }
+        guard !result.isEmpty else { throw FeatureError.message("The folder has no mod content. Choose a folder whose children mirror Roblox’s Resources folder.") }
+        return result.sorted()
+    }
+
+    private func checkParents(of target: URL, inside root: URL) throws {
+        var url = target
+        while url.path != root.path {
+            if let attributes = try? fm.attributesOfItem(atPath: url.path), attributes[.type] as? FileAttributeType == .typeSymbolicLink { throw EngineError.unsafePath }
+            url.deleteLastPathComponent()
+        }
+    }
+
+    private func relativePath(_ url: URL, inside root: URL) throws -> String {
+        let normalized = url.deletingLastPathComponent().standardizedFileURL.resolvingSymlinksInPath().appendingPathComponent(url.lastPathComponent)
+        let base = root.pathComponents
+        guard Array(normalized.pathComponents.prefix(base.count)) == base else { throw EngineError.unsafePath }
+        return normalized.pathComponents.dropFirst(base.count).joined(separator: "/")
+    }
+
+    private func digest(_ source: URL) throws -> String {
+        try requireDirectory(source)
+        let root = source.standardizedFileURL.resolvingSymlinksInPath()
+        guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: nil) else { throw EngineError.unsafePath }
+        var paths: [URL] = []
+        for case let url as URL in enumerator { paths.append(url) }
+        var hash = SHA256()
+        for url in paths.sorted(by: { $0.path < $1.path }) {
+            hash.update(data: Data((try relativePath(url, inside: root) + "\0").utf8))
+            let type = try fm.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType
+            if type == .typeRegular {
+                hash.update(data: Data("file\0".utf8))
+                var contents = SHA256()
+                let handle = try FileHandle(forReadingFrom: url)
+                defer { try? handle.close() }
+                while let data = try handle.read(upToCount: 1_048_576), !data.isEmpty { contents.update(data: data) }
+                hash.update(data: Data(contents.finalize()))
+            } else if type == .typeSymbolicLink {
+                hash.update(data: Data("link\0".utf8))
+                hash.update(data: Data(SHA256.hash(data: Data(try fm.destinationOfSymbolicLink(atPath: url.path).utf8))))
+            } else { hash.update(data: Data("directory\0".utf8)) }
+        }
+        return hash.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func replaceDirectory(_ target: URL, with stage: URL, manifestURL: URL?, manifest: Data?) throws {
+        let previous = target.deletingLastPathComponent().appendingPathComponent(".appleblox-resources-\(UUID())")
+        try fm.moveItem(at: target, to: previous)
+        do {
+            try fm.moveItem(at: stage, to: target)
+            if let manifestURL, let manifest { try manifest.write(to: manifestURL, options: .atomic) }
+        } catch {
+            if fm.fileExists(atPath: target.path) { try fm.removeItem(at: target) }
+            try fm.moveItem(at: previous, to: target)
+            throw error
+        }
+        try? fm.removeItem(at: previous)
+    }
+}

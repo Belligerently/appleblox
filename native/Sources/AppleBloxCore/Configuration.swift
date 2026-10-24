@@ -4,6 +4,7 @@ public struct GameShortcut: Codable, Identifiable, Equatable, Sendable {
     public let id: UUID
     public var name: String
     public var placeID: String
+    public var engineProfileID: UUID?
 
     public init(id: UUID = UUID(), name: String, placeID: String) throws {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -23,7 +24,9 @@ public struct GameShortcut: Codable, Identifiable, Equatable, Sendable {
     }
 
     public func validated() throws -> GameShortcut {
-        try GameShortcut(id: id, name: name, placeID: placeID)
+        var result = try GameShortcut(id: id, name: name, placeID: placeID)
+        result.engineProfileID = engineProfileID
+        return result
     }
 }
 
@@ -31,13 +34,33 @@ public struct NativeConfiguration: Codable, Equatable, Sendable {
     public var version = 1
     public var customRobloxPath: String?
     public var shortcuts: [GameShortcut] = []
+    public var engine = EngineConfiguration()
+    public var features = FeatureSettings()
 
     public init() {}
+
+    private enum CodingKeys: String, CodingKey { case version, customRobloxPath, shortcuts, engine, features }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decode(Int.self, forKey: .version)
+        customRobloxPath = try container.decodeIfPresent(String.self, forKey: .customRobloxPath)
+        shortcuts = try container.decode([GameShortcut].self, forKey: .shortcuts)
+        engine = try container.decodeIfPresent(EngineConfiguration.self, forKey: .engine) ?? EngineConfiguration()
+        features = try container.decodeIfPresent(FeatureSettings.self, forKey: .features) ?? FeatureSettings()
+    }
 
     public func validated() throws -> NativeConfiguration {
         guard version == 1 else { throw ConfigurationError.unsupportedVersion }
         var result = self
+        result.engine = try engine.validated()
+        result.features = try features.validated()
         result.shortcuts = try shortcuts.map { try $0.validated() }
+        guard result.shortcuts.allSatisfy({ shortcut in
+            shortcut.engineProfileID == nil || engine.profiles.contains(where: { $0.id == shortcut.engineProfileID })
+        }) else {
+            throw EngineError.invalidProfiles
+        }
         guard Set(result.shortcuts.map(\.id)).count == result.shortcuts.count else {
             throw ConfigurationError.duplicateIDs
         }

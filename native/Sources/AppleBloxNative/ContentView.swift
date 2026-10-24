@@ -1,14 +1,23 @@
 import SwiftUI
+import AppKit
+import Combine
 
 enum Destination: String, CaseIterable, Identifiable {
-    case launcher = "Launcher", games = "My Games", installation = "Installation", diagnostics = "Diagnostics"
+    case launcher = "Launcher", games = "My Games", engine = "Engine", mods = "Mods", accounts = "Accounts", integrations = "Integrations", history = "History", installation = "Installation", diagnostics = "Diagnostics", about = "About"
+    static let primaryCases: [Destination] = [.launcher, .games, .engine, .mods]
     var id: Self { self }
     var symbol: String {
         switch self {
         case .launcher: "play.square.stack"
         case .games: "gamecontroller"
+        case .engine: "slider.horizontal.3"
+        case .mods: "shippingbox"
+        case .accounts: "person.crop.circle"
+        case .integrations: "puzzlepiece.extension"
+        case .history: "clock"
         case .installation: "externaldrive"
         case .diagnostics: "waveform.path.ecg"
+        case .about: "info.circle"
         }
     }
 }
@@ -39,7 +48,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain).compactGlass(cornerRadius: 14)
                 .help("Refresh installation and running status").accessibilityLabel("Refresh")
-                .disabled(model.isLaunching)
+                .disabled(model.isBusy)
             }
             NavigationTabs(selection: $destination)
             ZStack(alignment: .topLeading) {
@@ -56,11 +65,27 @@ struct ContentView: View {
         .background { LauncherBackdrop() }
         .nativeWindowMaterial()
         .frame(minWidth: 580, minHeight: 390)
+        .task { await model.runServices() }
+        .onOpenURL { model.receiveLaunchURL($0) }
+        .onReceive(Publishers.Merge(
+            NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification),
+            NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didTerminateApplicationNotification)
+        )) { _ in model.updateRunningStatus() }
         .alert("Something needs attention", isPresented: Binding(
             get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } }
         )) {
             Button("OK", role: .cancel) { model.errorMessage = nil }
         } message: { Text(model.errorMessage ?? "") }
+        .confirmationDialog("Open this Roblox launch request?", isPresented: Binding(get: { model.pendingLink != nil }, set: { if !$0 { model.pendingLink = nil } }), titleVisibility: .visible) {
+            Button("Open in Roblox") {
+                if let link = model.pendingLink {
+                    model.pendingLink = nil
+                    let shortcut = model.configuration.shortcuts.first { $0.placeID == link.placeID }
+                    Task { await model.launch(shortcut: shortcut, link: link) }
+                }
+            }
+            .disabled(model.isBusy || model.installation == nil)
+        } message: { Text("Your enabled engine profiles, mods, and selected account will be used for a fresh Player session.") }
     }
 
     private var pageContent: some View {
@@ -68,8 +93,14 @@ struct ContentView: View {
             switch destination {
             case .launcher: LauncherView(model: model, showGames: { destination = .games })
             case .games: GamesView(model: model)
+            case .engine: EngineView(model: model)
+            case .mods: ModsView(model: model)
+            case .accounts: AccountsView(model: model)
+            case .integrations: IntegrationsView(model: model)
+            case .history: HistoryView(model: model)
             case .installation: InstallationView(model: model)
             case .diagnostics: DiagnosticsView(model: model)
+            case .about: AboutView()
             }
         }
     }
@@ -83,7 +114,7 @@ private struct NavigationTabs: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            ForEach(Destination.allCases) { item in
+            ForEach(Destination.primaryCases) { item in
                 Button { selection = item } label: {
                     Label(item.rawValue, systemImage: item.symbol)
                         .font(.system(size: 12, weight: .medium))
@@ -101,6 +132,23 @@ private struct NavigationTabs: View {
                     }
                 }
                 .accessibilityAddTraits(selection == item ? .isSelected : [])
+            }
+            Menu {
+                ForEach(Destination.allCases.filter { !Destination.primaryCases.contains($0) }) { item in
+                    Button(item.rawValue, systemImage: selection == item ? "checkmark" : item.symbol) { selection = item }
+                }
+            } label: {
+                Label("More", systemImage: "ellipsis.circle")
+                    .font(.system(size: 12, weight: .medium)).frame(maxWidth: .infinity).padding(.vertical, 9)
+            }
+            .menuStyle(.borderlessButton).accessibilityLabel("More pages")
+            .frame(maxWidth: .infinity, minHeight: 36)
+            .padding(.horizontal, 6)
+            .background {
+                if !Destination.primaryCases.contains(selection) {
+                    RoundedRectangle(cornerRadius: 10).fill(AppleBloxTheme.primary.opacity(colorScheme == .dark ? 0.32 : 0.14))
+                        .matchedGeometryEffect(id: "selected-tab", in: selectionAnimation)
+                }
             }
         }
         .padding(4)
@@ -177,6 +225,7 @@ struct LauncherView: View {
     let showGames: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var confirmQuit = false
 
     var body: some View {
         ScrollView {
@@ -220,7 +269,11 @@ struct LauncherView: View {
                         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: model.isLaunching)
                     }
                     .launchButtonStyle().controlSize(.large)
-                    .disabled(model.installation == nil || model.isLaunching).keyboardShortcut("r", modifiers: .command)
+                    .disabled(model.installation == nil || model.isBusy).keyboardShortcut("r", modifiers: .command)
+                    if model.isRunning {
+                        Button("Quit Roblox", systemImage: "stop.fill") { confirmQuit = true }
+                            .controlSize(.small).disabled(model.isBusy)
+                    }
                     Button {
                         if model.installation == nil { model.chooseInstallation() } else { model.revealInstallation() }
                     } label: {
@@ -257,7 +310,7 @@ struct LauncherView: View {
                                 Button("Play", systemImage: "play.fill") { Task { await model.launch(shortcut: shortcut) } }
                                     .labelStyle(.iconOnly).buttonStyle(.plain).frame(width: 28, height: 28)
                                     .help("Play " + shortcut.name).accessibilityLabel("Play " + shortcut.name)
-                                    .disabled(model.installation == nil || model.isLaunching)
+                                    .disabled(model.installation == nil || model.isBusy)
                             }
                             .padding(.horizontal, 14).padding(.vertical, 9)
                         }
@@ -267,15 +320,9 @@ struct LauncherView: View {
             }
         }
         .scrollIndicators(.hidden)
-        .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 5) {
-                Image(systemName: "swift")
-                Text("Native preview · 0.1.8")
-                Spacer()
-                Text("⌘R to launch")
-            }
-            .font(.system(size: 10)).foregroundStyle(.tertiary).padding(.top, 8)
-        }
+        .confirmationDialog("Quit Roblox?", isPresented: $confirmQuit, titleVisibility: .visible) {
+            Button("Quit Roblox", role: .destructive, action: model.quitRoblox)
+        } message: { Text("This asks all running Roblox Player windows to close.") }
     }
 }
 
@@ -302,6 +349,7 @@ struct InstallationView: View {
                 Text(model.store.directory.path).textSelection(.enabled).font(.caption)
                 Text("Stored separately from the original AppleBlox settings.").font(.caption).foregroundStyle(.secondary)
             }
+            UpdateControls(model: model)
         }
         .formStyle(.grouped).scrollContentBackground(.hidden).controlSize(.small)
         .contentMargins(.horizontal, 0, for: .scrollContent)
@@ -326,7 +374,7 @@ struct DiagnosticsView: View {
                 .padding(.vertical, 3)
             }
             .listStyle(.plain).scrollContentBackground(.hidden)
-            Text("Session activity · Refresh to update process status").font(.caption2).foregroundStyle(.tertiary)
+            Text("Session activity · Running status updates automatically").font(.caption2).foregroundStyle(.tertiary)
         }
     }
 }
