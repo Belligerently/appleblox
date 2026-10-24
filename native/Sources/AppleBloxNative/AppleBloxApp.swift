@@ -1,8 +1,16 @@
+import AppKit
 import SwiftUI
 
 @main
 struct AppleBloxApp: App {
     @State private var model = LauncherModel()
+
+    init() {
+        if let url = Bundle.main.url(forResource: "AppIcon-BlueLeaf-Dark", withExtension: "icns"),
+           let icon = NSImage(contentsOf: url) {
+            NSApplication.shared.applicationIconImage = icon
+        }
+    }
 
     var body: some Scene {
         Window("AppleBlox Native", id: "compact-launcher") {

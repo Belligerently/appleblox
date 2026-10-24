@@ -35,22 +35,8 @@ struct RenderBranding {
             context.saveGState()
             context.addPath(shape)
             context.clip()
-            let gradient = CGGradient(colorsSpace: space, colors: [CGColor(gray: 0.19, alpha: 1), CGColor(gray: 0.075, alpha: 1)] as CFArray, locations: [0, 1])!
+            let gradient = CGGradient(colorsSpace: space, colors: [CGColor(gray: 0.12, alpha: 1), CGColor(gray: 0.055, alpha: 1)] as CFArray, locations: [0, 1])!
             context.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: size.width, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-            let blueGlow = CGGradient(colorsSpace: space,
-                                      colors: [CGColor(red: 0.04, green: 0.52, blue: 1, alpha: 0.24),
-                                               CGColor(red: 0.04, green: 0.52, blue: 1, alpha: 0)] as CFArray,
-                                      locations: [0, 1])!
-            let blueCenter = CGPoint(x: size.width * 0.12, y: size.height * 0.12)
-            context.drawRadialGradient(blueGlow, startCenter: blueCenter, startRadius: 0,
-                                       endCenter: blueCenter, endRadius: size.width * 0.88, options: [])
-            let roseGlow = CGGradient(colorsSpace: space,
-                                      colors: [CGColor(red: 0.69, green: 0.15, blue: 0.27, alpha: 0.2),
-                                               CGColor(red: 0.69, green: 0.15, blue: 0.27, alpha: 0)] as CFArray,
-                                      locations: [0, 1])!
-            let roseCenter = CGPoint(x: size.width * 0.92, y: size.height * 0.9)
-            context.drawRadialGradient(roseGlow, startCenter: roseCenter, startRadius: 0,
-                                       endCenter: roseCenter, endRadius: size.width * 0.82, options: [])
             context.restoreGState()
             context.addPath(shape)
             context.setStrokeColor(CGColor(gray: 1, alpha: 0.12))

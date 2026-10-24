@@ -270,7 +270,7 @@ struct LauncherView: View {
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 5) {
                 Image(systemName: "swift")
-                Text("Native preview · 0.1.7")
+                Text("Native preview · 0.1.8")
                 Spacer()
                 Text("⌘R to launch")
             }

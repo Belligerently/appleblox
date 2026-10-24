@@ -30,7 +30,7 @@ Tab selection uses one moving highlight; page changes crossfade in a fixed conte
 
 ## Fork branding
 
-The original AppleBlox geometry is preserved exactly: tilted square, square opening, bite, and leaf. The body retains the original rose gradient (`#CE0D3E` → `#850828`); the leaf uses a blue gradient (`#58BFFF` → `#0A84FF`) to distinguish this fork. The macOS icon tile has subtle blue and rose lighting. There is no fork badge or fork-shaped cutout. Original logo credit: @typeofnull, as credited by AppleBlox. The inherited GPL-3.0 license continues to apply.
+The original AppleBlox geometry is preserved exactly: tilted square, square opening, bite, and leaf. The body retains the original rose gradient (`#CE0D3E` → `#850828`); the leaf uses a blue gradient (`#58BFFF` → `#0A84FF`) to distinguish this fork. The main macOS app icon uses a neutral dark charcoal tile, with the rose body and blue leaf as the central mark. The bundle names this icon explicitly, and the app sets its Dock icon from that same bundled resource at startup. There is no fork badge or fork-shaped cutout. Original logo credit: @typeofnull, as credited by AppleBlox. The inherited GPL-3.0 license continues to apply.
 
 - `Resources/Branding/AppleBloxFork.svg` is the reusable vector mark.
 - `ForkLogoGeometry.swift` shares the mark geometry between the SwiftUI view and the icon renderer.
