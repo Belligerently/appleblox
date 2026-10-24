@@ -23,7 +23,7 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 18) {
             HStack(spacing: 9) {
-                Image(systemName: "square.stack.3d.up.fill").foregroundStyle(AppleBloxTheme.primary).font(.title3)
+                AppleBloxForkLogo().frame(width: 21, height: 23)
                 Text("AppleBlox").font(.headline)
                 Text("NATIVE").font(.system(size: 9, weight: .bold, design: .rounded))
                     .tracking(1.4).foregroundStyle(.secondary)
@@ -182,8 +182,8 @@ struct LauncherView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 14) {
-                    Image(systemName: "square.stack.3d.up.fill")
-                        .font(.system(size: 28, weight: .medium)).foregroundStyle(AppleBloxTheme.primary)
+                    AppleBloxForkLogo()
+                        .frame(width: 38, height: 41)
                         .frame(width: 56, height: 56)
                         .background(AppleBloxTheme.primary.opacity(0.1), in: .rect(cornerRadius: 16)).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 5) {
@@ -270,7 +270,7 @@ struct LauncherView: View {
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 5) {
                 Image(systemName: "swift")
-                Text("Native preview · 0.1.2")
+                Text("Native preview · 0.1.3")
                 Spacer()
                 Text("⌘R to launch")
             }

@@ -28,6 +28,15 @@ The native palette is derived directly from `frontend/src/theme.css`: rose prima
 
 Tab selection uses one moving highlight; page changes crossfade in a fixed content area. Navigation from Quick Play follows the same path as the tabs. Refresh feedback and launch-progress changes animate locally; saved game rows animate on insert/remove. Reduce Motion disables these custom animations.
 
+## Fork branding
+
+The original AppleBlox silhouette and rose gradient are retained, with a small branch symbol inside the central square opening to distinguish this fork. Original logo credit: @typeofnull, as credited by AppleBlox. The inherited GPL-3.0 license continues to apply.
+
+- `Resources/Branding/AppleBloxFork.svg` is the reusable vector mark.
+- `ForkLogoGeometry.swift` shares the mark geometry between the SwiftUI view and the icon renderer.
+- `AppleBloxForkLogo.swift` draws the mark at native resolution in the header and launcher.
+- `Scripts/RenderBranding.swift` generates a transparent PNG and a complete icon set. The bundle script converts it to ICNS for the Dock and Finder. Generated assets live under `.build/branding/`.
+
 ## Available in this milestone
 
 - Detect Player in system/user Applications folders or through Launch Services; select another app with a native file picker.
