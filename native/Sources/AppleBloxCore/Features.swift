@@ -5,6 +5,7 @@ public struct ContentMod: Codable, Equatable, Identifiable, Sendable {
     public var name: String
     public var enabled: Bool
     public let fileCount: Int
+    public var iconColorHex: String?
     public init(id: UUID = UUID(), name: String, enabled: Bool = true, fileCount: Int) {
         self.id = id; self.name = name; self.enabled = enabled; self.fileCount = fileCount
     }
@@ -36,6 +37,9 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
               selectedAccountID == nil || accounts.contains(where: { $0.id == selectedAccountID }),
               !discordClientID.isEmpty, discordClientID.allSatisfy({ $0.isASCII && $0.isNumber }) else {
             throw FeatureError.message("The feature settings contain invalid or duplicate records.")
+        }
+        for mod in mods {
+            if let hex = mod.iconColorHex { _ = try IconColor(hex: hex) }
         }
         return self
     }

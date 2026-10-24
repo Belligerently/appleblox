@@ -13,6 +13,45 @@ public actor ContentModStore {
         var appliedDigest: String
     }
 
+    public func importIconColor(_ color: IconColor, installation: RobloxInstallation) throws -> ContentMod {
+        let installation = try RobloxInstallation.inspect(installation.url)
+        let resources = installation.url.appendingPathComponent("Contents/Resources")
+        try requireDirectory(resources)
+        let root = resources.appendingPathComponent(IconFontColorizer.resourcePath)
+        try checkParents(of: root, inside: resources)
+        try requireDirectory(root)
+        let workspace = directory.appendingPathComponent("icon-import-\(UUID())")
+        defer { try? fm.removeItem(at: workspace) }
+        let output = workspace.appendingPathComponent(IconFontColorizer.resourcePath)
+        try fm.createDirectory(at: output.appendingPathComponent("Font"), withIntermediateDirectories: true)
+        for name in ["BuilderIcons-Regular", "BuilderIcons-Filled"] {
+            try Task.checkCancellation()
+            let source = root.appendingPathComponent("Font/\(name).ttf")
+            try checkParents(of: source, inside: resources)
+            let attributes = try fm.attributesOfItem(atPath: source.path)
+            guard attributes[.type] as? FileAttributeType == .typeRegular,
+                  (attributes[.size] as? NSNumber)?.intValue ?? Int.max <= 20_971_520 else { throw EngineError.unsafePath }
+            let tinted = try IconFontColorizer.colorize(Data(contentsOf: source), color: color)
+            let descriptors = CTFontManagerCreateFontDescriptorsFromData(tinted as CFData)
+            guard CFArrayGetCount(descriptors) == 1 else {
+                throw FeatureError.message("macOS could not read the generated icon font. No mod was created.")
+            }
+            try tinted.write(to: output.appendingPathComponent("Font/\(name).otf"), options: .atomic)
+        }
+        let family = root.appendingPathComponent("BuilderIcons.json")
+        try checkParents(of: family, inside: resources)
+        let attributes = try fm.attributesOfItem(atPath: family.path)
+        guard attributes[.type] as? FileAttributeType == .typeRegular,
+              (attributes[.size] as? NSNumber)?.intValue ?? Int.max <= 1_048_576 else { throw EngineError.unsafePath }
+        try IconFontColorizer.family(Data(contentsOf: family)).write(to: output.appendingPathComponent("BuilderIcons.json"), options: .atomic)
+        try Task.checkCancellation()
+        var mod = try importFolder(workspace)
+        mod.name = "Icons \(color.hex)"
+        mod.iconColorHex = color.hex
+        mod.enabled = false
+        return mod
+    }
+
     public func importFont(_ font: URL, installation: RobloxInstallation) throws -> ContentMod {
         guard ["ttf", "otf"].contains(font.pathExtension.lowercased()),
               try fm.attributesOfItem(atPath: font.path)[.type] as? FileAttributeType == .typeRegular,

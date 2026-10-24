@@ -5,12 +5,15 @@ import SwiftUI
 struct ModsView: View {
     let model: LauncherModel
     @State private var confirmRestore = false
+    @State private var showIconColor = false
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 PageHeading(title: "Content Mods", subtitle: "Textures, sounds, and fonts in resource folders.")
                 Button("Import…", systemImage: "plus") { Task { await model.importMod() } }
                     .disabled(model.isBusy || !model.canSave)
+                Button("Icon Color…", systemImage: "paintpalette") { showIconColor = true }
+                    .disabled(model.isBusy || !model.canSave || model.installation == nil)
                 Button("Font…", systemImage: "textformat") { Task { await model.importFont() } }
                     .disabled(model.isBusy || !model.canSave || model.installation == nil)
             }
@@ -23,7 +26,7 @@ struct ModsView: View {
                         Toggle(isOn: Binding(get: { mod.enabled }, set: { model.toggleMod(mod, enabled: $0) })) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(mod.name).font(.callout.weight(.medium))
-                                Text(mod.fileCount == 1 ? "1 resource file" : "\(mod.fileCount) resource files").font(.caption).foregroundStyle(.secondary)
+                                Text(mod.iconColorHex.map { "Roblox icon color · \($0)" } ?? (mod.fileCount == 1 ? "1 resource file" : "\(mod.fileCount) resource files")).font(.caption).foregroundStyle(.secondary)
                             }
                         }
                         .disabled(model.isBusy || !model.canSave)
@@ -48,6 +51,7 @@ struct ModsView: View {
             Text(model.isWorkingFeature ? model.featureStatus : (model.featureStatus.isEmpty ? "Quit Roblox before applying. Original resources are backed up; conflicting mods are rejected." : model.featureStatus))
                 .font(.caption).foregroundStyle(.secondary).lineLimit(3)
         }
+        .sheet(isPresented: $showIconColor) { IconColorEditor(model: model) }
         .confirmationDialog("Restore Roblox’s original resources?", isPresented: $confirmRestore, titleVisibility: .visible) {
             Button("Restore Resources") { Task { await model.applyMods(restore: true) } }
         } message: { Text("Restores the pre-mod backup and disables applying mods on launch. Your imported mods stay in the library.") }

@@ -55,10 +55,28 @@ extension LauncherModel {
         } catch { report(error) }
     }
 
+    func createIconColorMod(_ color: IconColor) async throws {
+        guard !isBusy, canSave, let installation else { throw FeatureError.message("Choose a Roblox Player installation first.") }
+        isWorkingFeature = true
+        featureStatus = "Generating icon color mod…"
+        defer { isWorkingFeature = false }
+        let mod = try await modStore.importIconColor(color, installation: installation)
+        var next = configuration
+        next.features.mods.append(mod)
+        try persist(next)
+        featureStatus = "Created \(mod.name). Enable it, then Apply Mods to use it."
+        record(featureStatus)
+    }
+
     func toggleMod(_ mod: ContentMod, enabled: Bool) {
         do {
             var next = configuration
             guard let index = next.features.mods.firstIndex(where: { $0.id == mod.id }) else { return }
+            if enabled, mod.iconColorHex != nil {
+                for index in next.features.mods.indices where next.features.mods[index].iconColorHex != nil {
+                    next.features.mods[index].enabled = false
+                }
+            }
             next.features.mods[index].enabled = enabled
             try persist(next)
         } catch { report(error) }
