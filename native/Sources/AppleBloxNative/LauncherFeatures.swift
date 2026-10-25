@@ -16,6 +16,19 @@ extension LauncherModel {
         } catch { report(error) }
     }
 
+    func handlePlayerExit() {
+        guard NSRunningApplication.runningApplications(withBundleIdentifier: RobloxInstallation.bundleIdentifier).isEmpty else { return }
+        if configuration.features.returnToWebsite {
+            // Use the fixed public homepage, never a launch URL containing account/session data.
+            guard NSWorkspace.shared.open(URL(string: "https://www.roblox.com/")!) else {
+                errorMessage = "Couldn’t open Roblox’s website in your default browser."
+                return
+            }
+        }
+        // Hand off the website before the optional launcher termination begins.
+        quitLauncherAfterPlayerExit()
+    }
+
     func quitLauncherAfterPlayerExit() {
         guard configuration.features.quitLauncherWithPlayer, !isBusy, !isQuittingAfterPlayer else { return }
         isQuittingAfterPlayer = true

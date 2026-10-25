@@ -136,6 +136,7 @@ struct IntegrationsView: View {
             Section("Play history & behavior") {
                 featureToggle("Keep up to 200 recent game sessions", \.trackHistory)
                 featureToggle("Quit Player after leaving a game", \.quitAfterGame)
+                featureToggle("Return to Roblox’s website when Player closes", \.returnToWebsite)
                 featureToggle("Quit AppleBlox when Roblox closes", \.quitLauncherWithPlayer)
                 Text("Quits after the last Player instance closes. AppleBlox stays open if a launch, install, or file operation is in progress.")
                     .font(.caption).foregroundStyle(.secondary)

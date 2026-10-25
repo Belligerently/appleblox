@@ -92,7 +92,7 @@ final class LauncherModel {
         }
         isRunning = running
         status = installation == nil ? "Roblox not found" : (running ? "Roblox is running" : "Ready to launch")
-        if playerClosed { quitLauncherAfterPlayerExit() }
+        if playerClosed { handlePlayerExit() }
     }
 
     func quitRoblox() {

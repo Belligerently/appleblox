@@ -253,3 +253,26 @@ private struct ModFixture {
         try JSONDecoder().decode(FeatureSettings.self, from: JSONSerialization.data(withJSONObject: object))
     }
 }
+
+@Test func returnToWebsitePreferenceMigratesIndependentlyOfQuit() throws {
+    var settings = FeatureSettings()
+    settings.quitLauncherWithPlayer = true
+    settings.trackHistory = true
+    var old = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(settings)) as? [String: Any])
+    old.removeValue(forKey: "returnToWebsite")
+    let migrated = try JSONDecoder().decode(FeatureSettings.self, from: JSONSerialization.data(withJSONObject: old)).validated()
+    #expect(!migrated.returnToWebsite)
+    #expect(migrated.quitLauncherWithPlayer)
+    #expect(migrated.trackHistory)
+    for quit in [false, true] {
+        var config = NativeConfiguration()
+        config.features = migrated
+        config.features.returnToWebsite = true
+        config.features.quitLauncherWithPlayer = quit
+        #expect(try JSONDecoder().decode(NativeConfiguration.self, from: JSONEncoder().encode(config)).validated() == config)
+    }
+    old["returnToWebsite"] = "true"
+    #expect(throws: DecodingError.self) {
+        try JSONDecoder().decode(FeatureSettings.self, from: JSONSerialization.data(withJSONObject: old))
+    }
+}

@@ -30,10 +30,11 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public var newPlayerInstance = false
     public var quitAfterGame = false
     public var quitLauncherWithPlayer = false
+    public var returnToWebsite = false
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer
+        case mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
     }
 
     public init(from decoder: any Decoder) throws {
@@ -51,6 +52,7 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
         newPlayerInstance = try values.decodeIfPresent(Bool.self, forKey: .newPlayerInstance) ?? newPlayerInstance
         quitAfterGame = try values.decodeIfPresent(Bool.self, forKey: .quitAfterGame) ?? quitAfterGame
         quitLauncherWithPlayer = try values.decodeIfPresent(Bool.self, forKey: .quitLauncherWithPlayer) ?? quitLauncherWithPlayer
+        returnToWebsite = try values.decodeIfPresent(Bool.self, forKey: .returnToWebsite) ?? returnToWebsite
     }
 
     public func validated() throws -> FeatureSettings {
