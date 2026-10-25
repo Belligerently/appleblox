@@ -73,7 +73,9 @@ class PlanningTests(unittest.TestCase):
     def test_paths(self):
         for path in ['native/Sources/App.swift', 'native/Resources/Info.plist', 'native/build.sh', 'LICENSE', '.github/workflows/build.yml']:
             self.assertTrue(release.app_related(path), path)
-        for path in ['README.md', 'native/README.md', 'frontend/src/main.ts', '.github/assets/logo.png']:
+        for path in ['README.md', 'native/README.md', 'frontend/src/main.ts', '.github/assets/logo.png',
+                     'legacy/frontend/src/main.ts', 'legacy/scripts/package/dev.ts', 'legacy/package.json',
+                     'legacy/.github/assets/logo.png']:
             self.assertFalse(release.app_related(path), path)
 
     def test_real_history_multi_commit_docs_merge_and_new_branch(self):

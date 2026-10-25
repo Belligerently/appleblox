@@ -68,7 +68,7 @@ App-related pushes are tested and built automatically. Each successful app commi
 - **Other branches:** prereleases such as `0.1.0-dev.1`, `0.1.0-dev.2`, … advancing toward the next stable patch.
 - **Documentation-only changes:** no native release.
 
-Native tags use the `native-v` prefix to keep this fork’s history separate from upstream. Release versions are written into the packaged app; the inherited `package.json` version belongs to the legacy application. See the [release guide](https://github.com/Belligerently/appleblox-native/blob/swiftui-foundation/.github/RELEASING.md) for retries, commit selection, and signing details.
+Native tags use the `native-v` prefix to keep this fork’s history separate from upstream. Release versions are written into the packaged app; the inherited `legacy/package.json` version belongs to the legacy application. See the [release guide](https://github.com/Belligerently/appleblox-native/blob/swiftui-foundation/.github/RELEASING.md) for retries, commit selection, and signing details.
 
 ## Data and integrations
 
@@ -78,7 +78,7 @@ Settings, imported mods, backups, and optional play history are stored locally. 
 
 Use this fork’s [pull requests](https://github.com/Belligerently/appleblox-native/pulls) for fixes and contributions. For bugs, include your macOS version, Mac architecture, app version, reproduction steps, and relevant diagnostics. Remove account/session information from anything you share.
 
-The native implementation is in `native/`; `frontend/` and `scripts/` contain the inherited Svelte/Neutralino application. See [the legacy notes](docs/LEGACY.md) when working on that code.
+The native implementation is in `native/`. The self-contained `legacy/` folder holds the inherited Svelte/Neutralino source, assets, tests, package files, and build configuration. See [the legacy notes](docs/LEGACY.md) when working on that code.
 
 ## Credits and license
 

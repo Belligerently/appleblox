@@ -1,6 +1,6 @@
 import SwiftUI
 
-// Values from frontend/src/theme.css; HSL converted to sRGB without changing the palette.
+// Values from legacy/frontend/src/theme.css; HSL converted to sRGB without changing the palette.
 enum AppleBloxTheme {
     static let primary = Color(red: 0.694164, green: 0.149036, blue: 0.274506)
     static let primaryTextDark = Color(red: 0.966100, green: 0.833900, blue: 0.864416)

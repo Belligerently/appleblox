@@ -10,7 +10,7 @@ Use **Actions → Native build and release → Run workflow** on a selected bran
 
 ## Version policy
 
-`.github/scripts/release_config.json` sets a version floor of `0.1.0` and the stable branch `main`. Stable native tags determine the next patch version. Prereleases target the next stable version and use a separate development counter. Set the floor to `0.2.0` when deliberately beginning that minor release; do not edit the inherited `package.json` to version the native app.
+`.github/scripts/release_config.json` sets a version floor of `0.1.0` and the stable branch `main`. Stable native tags determine the next patch version. Prereleases target the next stable version and use a separate development counter. Set the floor to `0.2.0` when deliberately beginning that minor release; do not edit the inherited `legacy/package.json` to version the native app.
 
 Version reservations use atomic Git ref creation, so overlapping pushes cannot reserve the same version for different commits. No concurrency group cancels pending pushes. Versions are allocated after tests and compilation pass. A packaging/upload failure can leave a reserved tag or draft; rerunning the job reuses it. Manually deleting native tags or releases can disrupt this history; keep them.
 
