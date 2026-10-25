@@ -264,6 +264,14 @@ final class LauncherModel {
         NSWorkspace.shared.activateFileViewerSelecting([installation.url])
     }
 
+    func openPlayerContents() {
+        guard let installation else { errorMessage = "Choose a Roblox installation first."; return }
+        do {
+            let folder = try installation.contentsDirectory()
+            guard NSWorkspace.shared.open(folder) else { throw FeatureError.message("Couldn’t open Player’s Contents folder in Finder.") }
+        } catch { report(error) }
+    }
+
     func openRobloxLogs() {
         let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Roblox")
         guard FileManager.default.fileExists(atPath: url.path) else {

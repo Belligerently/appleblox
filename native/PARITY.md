@@ -75,6 +75,8 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 
 ## Native maintenance (outside the screenshot audit)
 
+- [x] Offline Native Guide, expanded About credits/inspiration, support/community/license resources, and validated Player Contents folder shortcuts.
+
 - [x] Audit original Appearance, Misc, and Info source and nested controls — see [SOURCE-PARITY.md](SOURCE-PARITY.md) for the resulting backlog.
 
 - [x] Optional notification sound control from the original Misc page; alternative AppleScript notifications remain unported.
@@ -84,6 +86,8 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 - [x] Appearance-only reset already exists under More → Appearance.
 
 ## Acceptance checks
+
+- [x] Isolated resources UI: compact About links/layout, offline guide from About and Diagnostics, full credits/inspiration/legacy-stack scrolling, selected Player Contents opening in Finder, and the Installation shortcut layout. Fixture tests validate normal/aliased app paths and reject stale bundles or redirected Contents. No Player was started or resources applied.
 
 - [x] Isolated runtime UI: FPS defaults off, confirmation explains future display changes, Cancel keeps it off, Feature Support sheet is readable, and ordinary quit works with the display inactive. Navigation to the new instance-management UI was interrupted, so live instance controls remain unverified. No Player launch or virtual-display creation occurred.
 

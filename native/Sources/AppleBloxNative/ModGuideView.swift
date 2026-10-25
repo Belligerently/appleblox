@@ -23,8 +23,8 @@ struct ModGuideView: View {
                     Divider()
                     Text("Guides & communities").font(.headline)
                     VStack(alignment: .leading, spacing: 10) {
-                        Link("AppleBlox Native support", destination: URL(string: "https://github.com/Belligerently/appleblox-native/issues")!)
-                        Link("Original AppleBlox community", destination: URL(string: "https://github.com/AppleBlox/appleblox#contributing")!)
+                        Link("AppleBlox Native support", destination: AppResources.support)
+                        Link("Original AppleBlox community", destination: AppResources.community)
                         Link("Roblox mods on GameBanana", destination: URL(string: "https://gamebanana.com/games/2879")!)
                         Link("Bloxstrap resource-mod guide", destination: URL(string: "https://bloxstraplabs.com/wiki/features/modding/")!)
                     }

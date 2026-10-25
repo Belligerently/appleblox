@@ -353,6 +353,7 @@ struct InstallationView: View {
                 HStack {
                     Button("Choose Roblox…", action: model.chooseInstallation).disabled(!model.canSave)
                     Button("Detect Automatically", action: model.useAutomaticDetection).disabled(!model.canSave)
+                    Button("Open Contents", action: model.openPlayerContents).disabled(model.installation == nil)
                     Spacer()
                     Link("Download Roblox", destination: URL(string: "https://www.roblox.com/download")!)
                 }
@@ -372,17 +373,21 @@ struct InstallationView: View {
 struct DiagnosticsView: View {
     let model: LauncherModel
     @State private var confirmClearCache = false
+    @State private var showNativeGuide = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 PageHeading(title: "Diagnostics", subtitle: model.isRunning ? "Roblox is running" : "Roblox is not running")
-                Button("Open Logs", systemImage: "folder", action: model.openRobloxLogs).controlSize(.small)
+                Button("Roblox Logs", systemImage: "folder", action: model.openRobloxLogs).controlSize(.small)
                 Menu {
                     Button("Copy Diagnostics", systemImage: "doc.on.doc") { Task { await model.copyDiagnostics() } }
                     Button("Clear Game Details Cache…", systemImage: "arrow.clockwise") { confirmClearCache = true }
                         .disabled(model.isBusy)
                     Divider()
+                    Button("Documentation…", systemImage: "book") { showNativeGuide = true }
+                    Button("Open Player Contents", systemImage: "folder", action: model.openPlayerContents)
+                        .disabled(model.installation == nil || model.isBusy)
                     Button("Open Native Data Folder", systemImage: "folder", action: model.showNativeData)
                 } label: { Image(systemName: "ellipsis.circle") }
                 .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Diagnostics actions")
@@ -398,6 +403,7 @@ struct DiagnosticsView: View {
             Text(model.maintenanceStatus.isEmpty ? "Session activity · Running status updates automatically" : model.maintenanceStatus)
                 .font(.caption).foregroundStyle(.secondary).lineLimit(3)
         }
+        .sheet(isPresented: $showNativeGuide) { NativeGuideView() }
         .confirmationDialog("Clear saved game details?", isPresented: $confirmClearCache, titleVisibility: .visible) {
             Button("Clear Game Details Cache") { Task { await model.clearGameDetailsCache() } }
         } message: {
