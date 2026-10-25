@@ -124,6 +124,8 @@ struct IntegrationsView: View {
         Form {
             Section("Discord Rich Presence") {
                 featureToggle("Show Roblox activity on Discord", \.discordPresence)
+                featureToggle("Show elapsed play time", \.discordPlayTime)
+                    .disabled(!model.configuration.features.discordPresence)
                 Text(model.discordStatus).font(.caption).foregroundStyle(.secondary)
                 HStack {
                     TextField("Application ID", text: $clientID)

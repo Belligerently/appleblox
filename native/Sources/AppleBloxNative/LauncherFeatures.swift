@@ -430,7 +430,7 @@ extension LauncherModel {
             }
             if configuration.features.discordPresence {
                 do {
-                    try await discord.update(clientID: configuration.features.discordClientID, session: currentSession, running: isRunning)
+                    try await discord.update(clientID: configuration.features.discordClientID, session: currentSession, running: isRunning, showPlayTime: configuration.features.discordPlayTime)
                     discordStatus = isRunning ? "Connected to Discord" : "Waiting for Roblox"
                 } catch { discordStatus = error.localizedDescription }
             } else { await discord.disconnect() }

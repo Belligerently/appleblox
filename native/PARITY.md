@@ -5,7 +5,8 @@ Compared against all seven images in the [upstream README gallery](https://githu
 - [ ] Server-location lookup and “Server Joined” notifications
 - [ ] Bloxstrap SDK compatibility
 - [ ] Game-controlled Discord presence
-- [ ] Separate Discord activity and play-time toggles
+- [x] Independent Discord play-time toggle — defaults on, preserves existing behavior
+- [ ] Separate Discord game-activity visibility toggle
 - [ ] Discord game artwork and creator attribution
 - [x] Return to Roblox’s website after the last Player closes — optional, defaults off
 - [x] Automatically exit AppleBlox after the last Player closes — optional, defaults off; saves tracked history and stays open during file/launch/install operations

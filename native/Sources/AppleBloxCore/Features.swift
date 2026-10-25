@@ -23,6 +23,7 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public var accounts: [RobloxAccount] = []
     public var selectedAccountID: Int64?
     public var discordPresence = false
+    public var discordPlayTime = true
     public var discordClientID = "1257650541677383721"
     public var trackHistory = false
     public var checkUpdatesOnOpen = false
@@ -34,7 +35,7 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
+        case mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordPlayTime, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
     }
 
     public init(from decoder: any Decoder) throws {
@@ -45,6 +46,7 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
         accounts = try values.decodeIfPresent([RobloxAccount].self, forKey: .accounts) ?? accounts
         selectedAccountID = try values.decodeIfPresent(Int64.self, forKey: .selectedAccountID)
         discordPresence = try values.decodeIfPresent(Bool.self, forKey: .discordPresence) ?? discordPresence
+        discordPlayTime = try values.decodeIfPresent(Bool.self, forKey: .discordPlayTime) ?? discordPlayTime
         discordClientID = try values.decodeIfPresent(String.self, forKey: .discordClientID) ?? discordClientID
         trackHistory = try values.decodeIfPresent(Bool.self, forKey: .trackHistory) ?? trackHistory
         checkUpdatesOnOpen = try values.decodeIfPresent(Bool.self, forKey: .checkUpdatesOnOpen) ?? checkUpdatesOnOpen

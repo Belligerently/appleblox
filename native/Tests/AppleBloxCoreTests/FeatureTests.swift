@@ -166,14 +166,29 @@ import Testing
         let handshake = try receive()
         guard handshake["client_id"] as? String == "123" else { return false }
         try send(Data(#"{"evt":"READY"}"#.utf8))
-        let command = try receive()
-        try send(Data("{}".utf8), opcode: 3)
-        _ = try receive() // PONG
-        try send(JSONSerialization.data(withJSONObject: ["nonce": command["nonce"] ?? ""]))
-        return command["cmd"] as? String == "SET_ACTIVITY"
+        for showTime in [true, false, true] {
+            let command = try receive()
+            let args = try #require(command["args"] as? [String: Any])
+            let activity = try #require(args["activity"] as? [String: Any])
+            #expect(command["cmd"] as? String == "SET_ACTIVITY")
+            #expect(activity["details"] as? String == "Test")
+            #expect((activity["timestamps"] != nil) == showTime)
+            if showTime {
+                let timestamps = try #require(activity["timestamps"] as? [String: Any])
+                #expect(timestamps["start"] as? Int == 1_700_000_000)
+            }
+            #expect((activity["buttons"] as? [[String: String]])?.first?["url"] == "https://www.roblox.com/games/1818/")
+            try send(Data("{}".utf8), opcode: 3)
+            _ = try receive() // PONG
+            try send(JSONSerialization.data(withJSONObject: ["nonce": command["nonce"] ?? ""]))
+        }
+        return true
     }
     let client = DiscordPresenceClient(socketRoots: [root.path])
-    try await client.update(clientID: "123", session: PlaySession(placeID: "1818", name: "Test"), running: true)
+    let session = PlaySession(placeID: "1818", name: "Test", startedAt: Date(timeIntervalSince1970: 1_700_000_000))
+    for showTime in [true, false, true] {
+        try await client.update(clientID: "123", session: session, running: true, showPlayTime: showTime)
+    }
     #expect(try await server.value)
     await client.disconnect()
 }
@@ -275,4 +290,15 @@ private struct ModFixture {
     #expect(throws: DecodingError.self) {
         try JSONDecoder().decode(FeatureSettings.self, from: JSONSerialization.data(withJSONObject: old))
     }
+}
+
+@Test func discordPlayTimePreferenceDefaultsOnForExistingUsers() throws {
+    var object = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(FeatureSettings())) as? [String: Any])
+    object.removeValue(forKey: "discordPlayTime")
+    object["discordPresence"] = true
+    var settings = try JSONDecoder().decode(FeatureSettings.self, from: JSONSerialization.data(withJSONObject: object)).validated()
+    #expect(settings.discordPlayTime)
+    #expect(settings.discordPresence)
+    settings.discordPlayTime = false
+    #expect(try JSONDecoder().decode(FeatureSettings.self, from: JSONEncoder().encode(settings)) == settings)
 }

@@ -10,9 +10,9 @@ public actor DiscordPresenceClient {
     public init(socketRoots: [String]? = nil) { self.socketRoots = socketRoots }
     deinit { if descriptor >= 0 { Darwin.close(descriptor) } }
 
-    public func update(clientID: String, session: PlaySession?, running: Bool) throws {
+    public func update(clientID: String, session: PlaySession?, running: Bool, showPlayTime: Bool = true) throws {
         guard running else { disconnect(); return }
-        let activityKey = "\(clientID):\(session?.id.uuidString ?? "home"):\(session?.name ?? "")"
+        let activityKey = "\(clientID):\(session?.id.uuidString ?? "home"):\(session?.name ?? ""):\(showPlayTime)"
         do {
             if descriptor < 0 || self.clientID != clientID {
                 disconnect()
@@ -21,7 +21,7 @@ public actor DiscordPresenceClient {
             if lastActivity == activityKey && Date().timeIntervalSince(lastSent) < 15 { return }
             var activity: [String: Any] = ["details": String((session?.name ?? "Browsing Roblox").prefix(128)), "state": "Playing with AppleBlox Native"]
             if let session {
-                activity["timestamps"] = ["start": Int(session.startedAt.timeIntervalSince1970)]
+                if showPlayTime { activity["timestamps"] = ["start": Int(session.startedAt.timeIntervalSince1970)] }
                 activity["buttons"] = [["label": "View game", "url": "https://www.roblox.com/games/\(session.placeID)/"]]
             }
             let nonce = UUID().uuidString
