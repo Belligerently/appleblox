@@ -24,6 +24,9 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public var selectedAccountID: Int64?
     public var discordPresence = false
     public var discordPlayTime = true
+    public var discordGameActivity = true
+    public var discordArtwork = false
+    public var discordGameButton = true
     public var discordClientID = "1257650541677383721"
     public var trackHistory = false
     public var checkUpdatesOnOpen = false
@@ -35,7 +38,7 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordPlayTime, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
+        case mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordPlayTime, discordGameActivity, discordArtwork, discordGameButton, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
     }
 
     public init(from decoder: any Decoder) throws {
@@ -47,6 +50,9 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
         selectedAccountID = try values.decodeIfPresent(Int64.self, forKey: .selectedAccountID)
         discordPresence = try values.decodeIfPresent(Bool.self, forKey: .discordPresence) ?? discordPresence
         discordPlayTime = try values.decodeIfPresent(Bool.self, forKey: .discordPlayTime) ?? discordPlayTime
+        discordGameActivity = try values.decodeIfPresent(Bool.self, forKey: .discordGameActivity) ?? discordGameActivity
+        discordArtwork = try values.decodeIfPresent(Bool.self, forKey: .discordArtwork) ?? discordArtwork
+        discordGameButton = try values.decodeIfPresent(Bool.self, forKey: .discordGameButton) ?? discordGameButton
         discordClientID = try values.decodeIfPresent(String.self, forKey: .discordClientID) ?? discordClientID
         trackHistory = try values.decodeIfPresent(Bool.self, forKey: .trackHistory) ?? trackHistory
         checkUpdatesOnOpen = try values.decodeIfPresent(Bool.self, forKey: .checkUpdatesOnOpen) ?? checkUpdatesOnOpen
@@ -55,6 +61,10 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
         quitAfterGame = try values.decodeIfPresent(Bool.self, forKey: .quitAfterGame) ?? quitAfterGame
         quitLauncherWithPlayer = try values.decodeIfPresent(Bool.self, forKey: .quitLauncherWithPlayer) ?? quitLauncherWithPlayer
         returnToWebsite = try values.decodeIfPresent(Bool.self, forKey: .returnToWebsite) ?? returnToWebsite
+    }
+
+    public var discordOptions: DiscordPresenceOptions {
+        .init(showGameActivity: discordGameActivity, showPlayTime: discordPlayTime, showArtwork: discordArtwork, showGameButton: discordGameButton)
     }
 
     public func validated() throws -> FeatureSettings {

@@ -135,6 +135,15 @@ import Testing
     #expect(Darwin.listen(fd, 1) == 0)
     var timeout = timeval(tv_sec: 3, tv_usec: 0)
     _ = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout.size(ofValue: timeout)))
+    let game = GameDetails(placeID: "1818", universeID: 111, name: "Test", creator: "Creator", playing: nil,
+                           iconURL: URL(string: "https://tr.rbxcdn.com/test.png"), fetchedAt: Date())
+    let scenarios: [(DiscordPresenceOptions, GameDetails?)] = [
+        (.init(), nil), (.init(showPlayTime: false), nil), (.init(), nil),
+        (.init(showArtwork: true), game),
+        (.init(showGameActivity: false, showArtwork: true), game),
+        (.init(showGameButton: false), game),
+        (.init(showArtwork: true), nil)
+    ]
     // The client uses blocking socket I/O. Its peer must not depend on the same
     // cooperative Swift executor, which may have only one worker available in CI.
     let server = AsyncThrowingStream<Bool, any Error> { continuation in
@@ -171,18 +180,25 @@ import Testing
                     let handshake = try receive()
                     guard handshake["client_id"] as? String == "123" else { return false }
                     try send(Data(#"{"evt":"READY"}"#.utf8))
-                    for showTime in [true, false, true] {
+                    for index in scenarios.indices {
+                        let showTime = index != 1
                         let command = try receive()
                         let args = try #require(command["args"] as? [String: Any])
                         let activity = try #require(args["activity"] as? [String: Any])
                         #expect(command["cmd"] as? String == "SET_ACTIVITY")
-                        #expect(activity["details"] as? String == "Test")
+                        #expect(activity["details"] as? String == (index == 4 ? "Playing Roblox" : "Test"))
+                        #expect(activity["state"] as? String == (index == 3 ? "by Creator" : "Playing with AppleBlox Native"))
+                        #expect((activity["assets"] != nil) == (index == 3))
+                        if index == 3 {
+                            #expect((activity["assets"] as? [String: String])?["large_image"] == "https://tr.rbxcdn.com/test.png")
+                        }
                         #expect((activity["timestamps"] != nil) == showTime)
                         if showTime {
                             let timestamps = try #require(activity["timestamps"] as? [String: Any])
                             #expect(timestamps["start"] as? Int == 1_700_000_000)
                         }
-                        #expect((activity["buttons"] as? [[String: String]])?.first?["url"] == "https://www.roblox.com/games/1818/")
+                        let buttonURL = (activity["buttons"] as? [[String: String]])?.first?["url"]
+                        #expect(buttonURL == ([4, 5].contains(index) ? nil : "https://www.roblox.com/games/1818/"))
                         try send(Data("{}".utf8), opcode: 3)
                         _ = try receive() // PONG
                         try send(JSONSerialization.data(withJSONObject: ["nonce": command["nonce"] ?? ""]))
@@ -196,8 +212,10 @@ import Testing
     }
     let client = DiscordPresenceClient(socketRoots: [root.path])
     let session = PlaySession(placeID: "1818", name: "Test", startedAt: Date(timeIntervalSince1970: 1_700_000_000))
-    for showTime in [true, false, true] {
-        try await client.update(clientID: "123", session: session, running: true, showPlayTime: showTime)
+    for (options, metadata) in scenarios {
+        try await client.update(clientID: "123", session: session, running: true, options: options, game: metadata)
+        // Unchanged payloads should not send another command; metadata/options changes above must send immediately.
+        try await client.update(clientID: "123", session: session, running: true, options: options, game: metadata)
     }
     for try await success in server { #expect(success) }
     await client.disconnect()

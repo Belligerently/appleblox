@@ -6,8 +6,9 @@ Compared against all seven images in the [upstream README gallery](https://githu
 - [ ] Bloxstrap SDK compatibility
 - [ ] Game-controlled Discord presence
 - [x] Independent Discord play-time toggle — defaults on, preserves existing behavior
-- [ ] Separate Discord game-activity visibility toggle
-- [ ] Discord game artwork and creator attribution
+- [x] Separate Discord game-activity visibility toggle — suppresses game name, artwork, creator, and game link together
+- [x] Discord game artwork and creator attribution — opt-in, public metadata only
+- [x] Optional Discord game-page button — public game page, not a server join/invite
 - [x] Return to Roblox’s website after the last Player closes — optional, defaults off
 - [x] Automatically exit AppleBlox after the last Player closes — optional, defaults off; saves tracked history and stays open during file/launch/install operations
 - [ ] Improve and verify multiple-instance support — standard macOS new-instance request exists
@@ -30,10 +31,16 @@ Compared against all seven images in the [upstream README gallery](https://githu
 
 Engine → Edit now groups Presets, Flags, and JSON in one profile sheet. Flags support allowlist-based addition, Boolean/integer values, persistent enabled/disabled state, name/value search, visible-row selection, and bulk removal. JSON imports replace enabled custom overrides; disabled rows remain unless an imported key enables them. JSON exports omit disabled overrides. Cancel discards draft changes; Save only stores the profile, and Apply remains separate.
 
+## Discord presence controls
+
+More → Integrations offers independent current-game, play-time, artwork/creator, and game-page-button controls. Artwork/creator defaults off; the other controls preserve prior defaults. Hiding the current game suppresses its name, creator, image, and link even if their saved controls are on. Public metadata is read through the existing cookie-free catalog/cache; failed or pending thumbnails fall back to text. Lookups run separately from log tracking, discard cancelled/obsolete sessions, and limit failed retries to once a minute.
+
 ## Acceptance checks
 
 - [x] Isolated visual-editor checks: add/search/edit flags, invalid value/JSON recovery, filtered selection and bulk removal, saved disabled values, and Cancel preserving the profile.
 
+- [x] Isolated Discord settings UI: independent toggles, master/game-visibility dependencies, and persistence after restart.
+- [x] Mock Discord IPC: visibility changes, late artwork, timestamp toggling, duplicate suppression, ping/pong, and acknowledgments.
 - [x] Both Player-close toggles migrate from older settings as off and persist independently.
 - [ ] Live Player-close verification: return-to-website alone, exit-launcher alone, both together, and multiple Player instances.
 - [ ] Confirm launcher remains open during an in-progress operation and when final history saving fails.

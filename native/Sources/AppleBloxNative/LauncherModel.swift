@@ -40,6 +40,10 @@ final class LauncherModel {
     var updateTask: Task<Void, Never>?
     var previousInstallation: URL?
     var currentSession: PlaySession?
+    var currentGameDetails: GameDetails?
+    var gameDetailsTask: Task<Void, Never>?
+    var gameDetailsLookupID: UUID?
+    var nextGameDetailsAttempt = Date.distantPast
     var history: [PlaySession] = []
     var canSaveHistory = true
     var historyRevision = 0

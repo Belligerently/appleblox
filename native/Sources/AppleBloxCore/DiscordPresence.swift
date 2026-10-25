@@ -4,33 +4,31 @@ import Foundation
 public actor DiscordPresenceClient {
     private var descriptor: Int32 = -1
     private var clientID: String?
-    private var lastActivity: String?
+    private var lastActivity: Data?
     private var lastSent = Date.distantPast
     private let socketRoots: [String]?
     public init(socketRoots: [String]? = nil) { self.socketRoots = socketRoots }
     deinit { if descriptor >= 0 { Darwin.close(descriptor) } }
 
-    public func update(clientID: String, session: PlaySession?, running: Bool, showPlayTime: Bool = true) throws {
+    public func update(clientID: String, session: PlaySession?, running: Bool, options: DiscordPresenceOptions = .init(), game: GameDetails? = nil) throws {
         guard running else { disconnect(); return }
-        let activityKey = "\(clientID):\(session?.id.uuidString ?? "home"):\(session?.name ?? ""):\(showPlayTime)"
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let activityData = try encoder.encode(DiscordActivity(session: session, game: game, options: options))
         do {
             if descriptor < 0 || self.clientID != clientID {
                 disconnect()
                 try connect(clientID: clientID)
             }
-            if lastActivity == activityKey && Date().timeIntervalSince(lastSent) < 15 { return }
-            var activity: [String: Any] = ["details": String((session?.name ?? "Browsing Roblox").prefix(128)), "state": "Playing with AppleBlox Native"]
-            if let session {
-                if showPlayTime { activity["timestamps"] = ["start": Int(session.startedAt.timeIntervalSince1970)] }
-                activity["buttons"] = [["label": "View game", "url": "https://www.roblox.com/games/\(session.placeID)/"]]
-            }
+            if lastActivity == activityData && Date().timeIntervalSince(lastSent) < 15 { return }
+            let activity = try JSONSerialization.jsonObject(with: activityData)
             let nonce = UUID().uuidString
             try send(opcode: 1, data: JSONSerialization.data(withJSONObject: ["cmd": "SET_ACTIVITY", "args": ["pid": ProcessInfo.processInfo.processIdentifier, "activity": activity], "nonce": nonce]))
             let response = try receiveFrame()
             guard response["evt"] as? String != "ERROR", response["nonce"] as? String == nonce else {
                 throw FeatureError.message("Discord rejected the activity update.")
             }
-            lastActivity = activityKey
+            lastActivity = activityData
             lastSent = Date()
         } catch { disconnect(); throw error }
     }

@@ -123,9 +123,17 @@ struct IntegrationsView: View {
     var body: some View {
         Form {
             Section("Discord Rich Presence") {
-                featureToggle("Show Roblox activity on Discord", \.discordPresence)
+                featureToggle("Enable Discord Rich Presence", \.discordPresence)
+                featureToggle("Show current game", \.discordGameActivity)
+                    .disabled(!model.configuration.features.discordPresence)
                 featureToggle("Show elapsed play time", \.discordPlayTime)
                     .disabled(!model.configuration.features.discordPresence)
+                featureToggle("Show game artwork and creator", \.discordArtwork)
+                    .disabled(!model.configuration.features.discordPresence || !model.configuration.features.discordGameActivity)
+                featureToggle("Show game-page button", \.discordGameButton)
+                    .disabled(!model.configuration.features.discordPresence || !model.configuration.features.discordGameActivity)
+                Text("Hiding the current game also hides its artwork, creator, and link. Elapsed time can remain visible.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Text(model.discordStatus).font(.caption).foregroundStyle(.secondary)
                 HStack {
                     TextField("Application ID", text: $clientID)

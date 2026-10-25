@@ -13,6 +13,7 @@ extension LauncherModel {
                 Task { await logReader.reset() }
             }
             if !next.features.discordPresence { Task { await discord.disconnect() }; discordStatus = "Off" }
+            refreshCurrentGameDetailsIfNeeded()
         } catch { report(error) }
     }
 
@@ -367,12 +368,36 @@ extension LauncherModel {
     }
 
     func finishCurrentSession() {
+        gameDetailsTask?.cancel(); gameDetailsTask = nil; gameDetailsLookupID = nil
+        currentGameDetails = nil
+        nextGameDetailsAttempt = .distantPast
         guard let session = currentSession else { return }
         if let index = history.firstIndex(where: { $0.id == session.id }) {
             history[index].endedAt = Date()
             saveHistorySnapshot()
         }
         currentSession = nil
+    }
+
+    func refreshCurrentGameDetailsIfNeeded() {
+        guard let session = currentSession, currentGameDetails == nil, gameDetailsTask == nil,
+              Date() >= nextGameDetailsAttempt,
+              configuration.features.trackHistory || (configuration.features.discordPresence && configuration.features.discordGameActivity) else { return }
+        // Metadata must not suspend the log/presence loop. Failed lookups retry at most once a minute.
+        nextGameDetailsAttempt = Date().addingTimeInterval(60)
+        let lookupID = UUID()
+        gameDetailsLookupID = lookupID
+        gameDetailsTask = Task {
+            defer { if gameDetailsLookupID == lookupID { gameDetailsTask = nil; gameDetailsLookupID = nil } }
+            guard let details = try? await gameCatalog.game(for: session.placeID),
+                  !Task.isCancelled, gameDetailsLookupID == lookupID, currentSession?.id == session.id else { return }
+            currentGameDetails = details
+            currentSession?.name = details.name
+            if configuration.features.trackHistory, let index = history.firstIndex(where: { $0.id == session.id }) {
+                history[index].name = details.name
+                saveHistorySnapshot()
+            }
+        }
     }
 
     private func saveHistorySnapshot() {
@@ -415,10 +440,7 @@ extension LauncherModel {
                                 history = Array(history.prefix(200))
                                 saveHistorySnapshot()
                             }
-                            if let name = try? await RobloxGameDirectory.name(for: placeID) {
-                                if currentSession?.id == session.id { currentSession?.name = name }
-                                if let index = history.firstIndex(where: { $0.id == session.id }) { history[index].name = name; saveHistorySnapshot() }
-                            }
+                            refreshCurrentGameDetailsIfNeeded()
                             record("Joined \(currentSession?.name ?? fallback).")
                         case .left:
                             let wasPlaying = currentSession != nil
@@ -428,14 +450,16 @@ extension LauncherModel {
                     }
                 } catch { record("Roblox logs couldn’t be read. Activity tracking will retry.") }
             }
+            refreshCurrentGameDetailsIfNeeded()
             if configuration.features.discordPresence {
                 do {
-                    try await discord.update(clientID: configuration.features.discordClientID, session: currentSession, running: isRunning, showPlayTime: configuration.features.discordPlayTime)
+                    try await discord.update(clientID: configuration.features.discordClientID, session: currentSession, running: isRunning, options: configuration.features.discordOptions, game: currentGameDetails)
                     discordStatus = isRunning ? "Connected to Discord" : "Waiting for Roblox"
                 } catch { discordStatus = error.localizedDescription }
             } else { await discord.disconnect() }
             do { try await Task.sleep(for: .seconds(2)) } catch { break }
         }
+        gameDetailsTask?.cancel(); gameDetailsTask = nil; gameDetailsLookupID = nil
         await discord.disconnect()
     }
 }

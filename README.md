@@ -34,7 +34,7 @@ The app targets **macOS 14 or later**. Liquid Glass is used on macOS 26 and late
 | Content mods | Local texture, sound, and font packs, custom fonts, Roblox UI icon colors, and original-resource restore |
 | Player updates | Roblox LIVE version checks and validated downloads with previous-app retention |
 | Accounts | Private website sign-in, explicit Player-login import, and Keychain-backed sessions |
-| Integrations | Optional Discord presence, local play history, and opt-in launch-link handling |
+| Integrations | Discord presence with visibility controls and optional game artwork, local play history, and opt-in launch-link handling |
 
 This is an ongoing migration. The online mod workshop, server-region picker, a full online game browser, and some original appearance preferences remain to be ported. Authenticated account switching and live Discord display still need acceptance testing. Roblox may ignore individual engine flags or restrict multiple instances.
 
