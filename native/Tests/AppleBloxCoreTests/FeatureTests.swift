@@ -135,61 +135,71 @@ import Testing
     #expect(Darwin.listen(fd, 1) == 0)
     var timeout = timeval(tv_sec: 3, tv_usec: 0)
     _ = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout.size(ofValue: timeout)))
-    let server = Task.detached { () throws -> Bool in
-        let connection = Darwin.accept(fd, nil, nil)
-        guard connection >= 0 else { throw FeatureError.message("Mock Discord accept timed out") }
-        defer { Darwin.close(connection) }
-        var timeout = timeval(tv_sec: 3, tv_usec: 0)
-        _ = setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout.size(ofValue: timeout)))
-        func read(_ size: Int) throws -> Data {
-            var bytes = Data(count: size)
-            var offset = 0
-            try bytes.withUnsafeMutableBytes { pointer in
-                while offset < size {
-                    let count = Darwin.recv(connection, pointer.baseAddress!.advanced(by: offset), size - offset, 0)
-                    guard count > 0 else { throw FeatureError.message("Mock read failed") }; offset += count
-                }
-            }
-            return bytes
+    // The client uses blocking socket I/O. Its peer must not depend on the same
+    // cooperative Swift executor, which may have only one worker available in CI.
+    let server = AsyncThrowingStream<Bool, any Error> { continuation in
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let success = try { () throws -> Bool in
+                    let connection = Darwin.accept(fd, nil, nil)
+                    guard connection >= 0 else { throw FeatureError.message("Mock Discord accept timed out") }
+                    defer { Darwin.close(connection) }
+                    var timeout = timeval(tv_sec: 3, tv_usec: 0)
+                    _ = setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout.size(ofValue: timeout)))
+                    func read(_ size: Int) throws -> Data {
+                        var bytes = Data(count: size)
+                        var offset = 0
+                        try bytes.withUnsafeMutableBytes { pointer in
+                            while offset < size {
+                                let count = Darwin.recv(connection, pointer.baseAddress!.advanced(by: offset), size - offset, 0)
+                                guard count > 0 else { throw FeatureError.message("Mock read failed") }; offset += count
+                            }
+                        }
+                        return bytes
+                    }
+                    func receive() throws -> [String: Any] {
+                        let header = try read(8)
+                        let count = header.withUnsafeBytes { UInt32(littleEndian: $0.loadUnaligned(fromByteOffset: 4, as: UInt32.self)) }
+                        guard count < 65_536 else { throw FeatureError.message("Bad mock frame") }
+                        return try JSONSerialization.jsonObject(with: read(Int(count))) as? [String: Any] ?? [:]
+                    }
+                    func send(_ data: Data, opcode: UInt32 = 1) throws {
+                        let frame = DiscordPresenceClient.frame(opcode: opcode, data: data)
+                        let count = frame.withUnsafeBytes { Darwin.send(connection, $0.baseAddress, $0.count, 0) }
+                        guard count == frame.count else { throw FeatureError.message("Mock write failed") }
+                    }
+                    let handshake = try receive()
+                    guard handshake["client_id"] as? String == "123" else { return false }
+                    try send(Data(#"{"evt":"READY"}"#.utf8))
+                    for showTime in [true, false, true] {
+                        let command = try receive()
+                        let args = try #require(command["args"] as? [String: Any])
+                        let activity = try #require(args["activity"] as? [String: Any])
+                        #expect(command["cmd"] as? String == "SET_ACTIVITY")
+                        #expect(activity["details"] as? String == "Test")
+                        #expect((activity["timestamps"] != nil) == showTime)
+                        if showTime {
+                            let timestamps = try #require(activity["timestamps"] as? [String: Any])
+                            #expect(timestamps["start"] as? Int == 1_700_000_000)
+                        }
+                        #expect((activity["buttons"] as? [[String: String]])?.first?["url"] == "https://www.roblox.com/games/1818/")
+                        try send(Data("{}".utf8), opcode: 3)
+                        _ = try receive() // PONG
+                        try send(JSONSerialization.data(withJSONObject: ["nonce": command["nonce"] ?? ""]))
+                    }
+                    return true
+                }()
+                continuation.yield(success)
+                continuation.finish()
+            } catch { continuation.finish(throwing: error) }
         }
-        func receive() throws -> [String: Any] {
-            let header = try read(8)
-            let count = header.withUnsafeBytes { UInt32(littleEndian: $0.loadUnaligned(fromByteOffset: 4, as: UInt32.self)) }
-            guard count < 65_536 else { throw FeatureError.message("Bad mock frame") }
-            return try JSONSerialization.jsonObject(with: read(Int(count))) as? [String: Any] ?? [:]
-        }
-        func send(_ data: Data, opcode: UInt32 = 1) throws {
-            let frame = DiscordPresenceClient.frame(opcode: opcode, data: data)
-            let count = frame.withUnsafeBytes { Darwin.send(connection, $0.baseAddress, $0.count, 0) }
-            guard count == frame.count else { throw FeatureError.message("Mock write failed") }
-        }
-        let handshake = try receive()
-        guard handshake["client_id"] as? String == "123" else { return false }
-        try send(Data(#"{"evt":"READY"}"#.utf8))
-        for showTime in [true, false, true] {
-            let command = try receive()
-            let args = try #require(command["args"] as? [String: Any])
-            let activity = try #require(args["activity"] as? [String: Any])
-            #expect(command["cmd"] as? String == "SET_ACTIVITY")
-            #expect(activity["details"] as? String == "Test")
-            #expect((activity["timestamps"] != nil) == showTime)
-            if showTime {
-                let timestamps = try #require(activity["timestamps"] as? [String: Any])
-                #expect(timestamps["start"] as? Int == 1_700_000_000)
-            }
-            #expect((activity["buttons"] as? [[String: String]])?.first?["url"] == "https://www.roblox.com/games/1818/")
-            try send(Data("{}".utf8), opcode: 3)
-            _ = try receive() // PONG
-            try send(JSONSerialization.data(withJSONObject: ["nonce": command["nonce"] ?? ""]))
-        }
-        return true
     }
     let client = DiscordPresenceClient(socketRoots: [root.path])
     let session = PlaySession(placeID: "1818", name: "Test", startedAt: Date(timeIntervalSince1970: 1_700_000_000))
     for showTime in [true, false, true] {
         try await client.update(clientID: "123", session: session, running: true, showPlayTime: showTime)
     }
-    #expect(try await server.value)
+    for try await success in server { #expect(success) }
     await client.disconnect()
 }
 
