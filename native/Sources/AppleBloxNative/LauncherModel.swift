@@ -34,6 +34,7 @@ final class LauncherModel {
     var isWorkingFeature = false
     var featureStatus = ""
     var hasModBackup = false
+    var modLibraryScan: ModLibraryScan?
     var latestRelease: RobloxRelease?
     var updateStatus = "Check for the latest Roblox release."
     var isCheckingUpdates = false

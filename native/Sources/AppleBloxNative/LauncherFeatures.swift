@@ -87,6 +87,7 @@ extension LauncherModel {
             var next = configuration
             next.features.mods.append(mod)
             try persist(next)
+            modLibraryScan = nil
             featureStatus = "Imported \(mod.name) (\(mod.fileCount) \(mod.fileCount == 1 ? "file" : "files"))."
             record(featureStatus)
         } catch { report(error) }
@@ -101,6 +102,7 @@ extension LauncherModel {
         var next = configuration
         next.features.mods.append(mod)
         try persist(next)
+        modLibraryScan = nil
         featureStatus = "Created \(mod.name). Enable it, then Apply Mods to use it."
         record(featureStatus)
     }
@@ -116,7 +118,40 @@ extension LauncherModel {
             }
             next.features.mods[index].enabled = enabled
             try persist(next)
+            if let scan = modLibraryScan { featureStatus = scan.summary(for: next.features.mods) }
         } catch { report(error) }
+    }
+
+    func rescanMods() async {
+        guard !isBusy, canSave else { return }
+        isWorkingFeature = true
+        featureStatus = "Scanning imported mod packs…"
+        defer { isWorkingFeature = false }
+        do {
+            let report = try await modStore.scan(configuration.features.mods)
+            var next = configuration
+            next.features.mods = report.mods
+            try persist(next)
+            modLibraryScan = report
+            featureStatus = report.summary(for: next.features.mods)
+            record(featureStatus)
+        } catch { report(error) }
+    }
+
+    func showModFiles(_ mod: ContentMod) async {
+        do {
+            let folder = try await modStore.checkedPackageURL(mod)
+            guard NSWorkspace.shared.open(folder) else { throw FeatureError.message("Couldn’t open this pack’s folder in Finder.") }
+        } catch { report(error) }
+    }
+
+    func modLibraryProblem(_ mod: ContentMod) -> String? {
+        guard let scan = modLibraryScan else { return nil }
+        if let issue = scan.issues.first(where: { $0.id == mod.id }) { return issue.message }
+        if let conflict = scan.activeConflicts(in: configuration.features.mods).first(where: { $0.modIDs.contains(mod.id) }) {
+            return "Conflicts at \(conflict.path)"
+        }
+        return nil
     }
 
     func importFont() async {
@@ -131,6 +166,7 @@ extension LauncherModel {
             var next = configuration
             next.features.mods.append(mod)
             try persist(next)
+            modLibraryScan = nil
             featureStatus = "Imported \(mod.name). Apply Mods to use it. Enable one font mod at a time."
             record(featureStatus)
         } catch { report(error) }
@@ -141,6 +177,7 @@ extension LauncherModel {
             var next = configuration
             next.features.mods.removeAll { $0.id == mod.id }
             try persist(next)
+            modLibraryScan = nil
             // Keep imported content on disk, so removing a library record is recoverable.
             featureStatus = "Removed from library. Apply again to update Roblox; imported files remain in the Mods folder."
         } catch { report(error) }

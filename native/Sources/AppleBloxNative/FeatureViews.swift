@@ -6,6 +6,8 @@ struct ModsView: View {
     let model: LauncherModel
     @State private var confirmRestore = false
     @State private var showIconColor = false
+    @State private var showModGuide = false
+    @State private var showScanResults = false
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -16,6 +18,15 @@ struct ModsView: View {
                     .disabled(model.isBusy || !model.canSave || model.installation == nil)
                 Button("Font…", systemImage: "textformat") { Task { await model.importFont() } }
                     .disabled(model.isBusy || !model.canSave || model.installation == nil)
+                Menu {
+                    Button("Rescan Library", systemImage: "arrow.clockwise") { Task { await model.rescanMods() } }
+                        .disabled(model.isBusy || !model.canSave || model.configuration.features.mods.isEmpty)
+                    Button("Scan Results…", systemImage: "list.bullet.clipboard") { showScanResults = true }
+                        .disabled(model.modLibraryScan == nil)
+                    Divider()
+                    Button("Mod Guide…", systemImage: "book") { showModGuide = true }
+                } label: { Image(systemName: "ellipsis.circle") }
+                .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Mod library actions")
             }
             if model.configuration.features.mods.isEmpty {
                 ContentUnavailableView("No content mods", systemImage: "shippingbox", description: Text("Import a resource folder beginning with content, PlatformContent, or ExtraContent.").font(.callout))
@@ -27,11 +38,20 @@ struct ModsView: View {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(mod.name).font(.callout.weight(.medium))
                                 Text(mod.iconColorHex.map { "Roblox icon color · \($0)" } ?? (mod.fileCount == 1 ? "1 resource file" : "\(mod.fileCount) resource files")).font(.caption).foregroundStyle(.secondary)
+                                if let problem = model.modLibraryProblem(mod) {
+                                    Label(problem, systemImage: "exclamationmark.triangle")
+                                        .font(.caption).foregroundStyle(.red).lineLimit(2).help(problem)
+                                }
                             }
                         }
                         .disabled(model.isBusy || !model.canSave)
-                        Button("Remove", systemImage: "minus.circle") { model.removeMod(mod) }
-                            .labelStyle(.iconOnly).buttonStyle(.plain).disabled(model.isBusy || !model.canSave)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Menu {
+                            Button("Show Files", systemImage: "folder") { Task { await model.showModFiles(mod) } }
+                            Button("Remove from Library", systemImage: "minus.circle", role: .destructive) { model.removeMod(mod) }
+                        } label: { Image(systemName: "ellipsis.circle") }
+                        .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Actions for \(mod.name)")
+                        .disabled(model.isBusy || !model.canSave)
                     }
                     .padding(.vertical, 3)
                 }
@@ -41,7 +61,7 @@ struct ModsView: View {
                 .controlSize(.small).disabled(model.isBusy || !model.canSave)
             HStack {
                 Button("Apply Mods") { Task { await model.applyMods() } }.launchButtonStyle()
-                    .disabled(model.isBusy || !model.canSave || model.isRunning || model.installation == nil || (model.configuration.features.mods.isEmpty && !model.hasModBackup))
+                    .disabled(model.isBusy || !model.canSave || model.isRunning || model.installation == nil || (model.configuration.features.mods.isEmpty && !model.hasModBackup) || model.modLibraryScan?.blocksApplying(model.configuration.features.mods) == true)
                 Button("Restore Resources…") { confirmRestore = true }
                     .disabled(model.isBusy || !model.canSave || model.isRunning || !model.hasModBackup)
                 Spacer()
@@ -52,6 +72,10 @@ struct ModsView: View {
                 .font(.caption).foregroundStyle(.secondary).lineLimit(3)
         }
         .sheet(isPresented: $showIconColor) { IconColorEditor(model: model) }
+        .sheet(isPresented: $showModGuide) { ModGuideView() }
+        .sheet(isPresented: $showScanResults) {
+            if let scan = model.modLibraryScan { ModScanResultsView(scan: scan, mods: model.configuration.features.mods) }
+        }
         .confirmationDialog("Restore Roblox’s original resources?", isPresented: $confirmRestore, titleVisibility: .visible) {
             Button("Restore Resources") { Task { await model.applyMods(restore: true) } }
         } message: { Text("Restores the pre-mod backup and disables applying mods on launch. Your imported mods stay in the library.") }

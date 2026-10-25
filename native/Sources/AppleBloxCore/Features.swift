@@ -4,7 +4,7 @@ public struct ContentMod: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public var name: String
     public var enabled: Bool
-    public let fileCount: Int
+    public var fileCount: Int
     public var iconColorHex: String?
     public init(id: UUID = UUID(), name: String, enabled: Bool = true, fileCount: Int) {
         self.id = id; self.name = name; self.enabled = enabled; self.fileCount = fileCount

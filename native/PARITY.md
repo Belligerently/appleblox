@@ -23,8 +23,8 @@ Compared against all seven images in the [upstream README gallery](https://githu
 - [x] FastFlag selection and bulk removal
 - [ ] Review original profile types and flag compatibility — named/per-game profiles, JSON editing, import/export already exist
 - [ ] Legacy Resolution mode for mods
-- [ ] Mod installation guide and community links
-- [ ] Mods-folder rescan — explicit pack imports already exist
+- [x] Mod installation guide and community links — native folder instructions, fork support, upstream community, GameBanana, and Bloxstrap resource guide
+- [x] Mods-folder rescan — validates registered imported copies, refreshes counts, and reports enabled conflicts; new packs still use Import
 - [ ] Live Discord display verification
 
 ## Visual FastFlag editor
@@ -35,7 +35,13 @@ Engine → Edit now groups Presets, Flags, and JSON in one profile sheet. Flags 
 
 More → Integrations offers independent current-game, play-time, artwork/creator, and game-page-button controls. Artwork/creator defaults off; the other controls preserve prior defaults. Hiding the current game suppresses its name, creator, image, and link even if their saved controls are on. Public metadata is read through the existing cookie-free catalog/cache; failed or pending thumbnails fall back to text. Lookups run separately from log tracking, discard cancelled/obsolete sessions, and limit failed retries to once a minute.
 
+## Mod library tools
+
+Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. Each pack’s ••• menu offers Show Files and Remove from Library. Rescanning checks all registered imported copies, including disabled ones, updates valid file counts without changing identity/selection, and reports invalid/missing packs and resource overlaps. Conflict findings follow enabled selection; known invalid enabled packs block Apply until fixed/rescanned or disabled. Backups, unregistered folders, and removed records are not discovered. Scan only updates library metadata; applying remains explicit or opt-in before launch.
+
 ## Acceptance checks
+
+- [x] Isolated Mods UI: refreshed counts, invalid-pack findings, enabled conflict blocking, disabled conflict resolution, repaired-pack rescanning, Show Files in Finder, and local guide/link layout.
 
 - [x] Isolated visual-editor checks: add/search/edit flags, invalid value/JSON recovery, filtered selection and bulk removal, saved disabled values, and Cancel preserving the profile.
 

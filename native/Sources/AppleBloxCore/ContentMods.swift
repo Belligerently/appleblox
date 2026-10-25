@@ -107,6 +107,43 @@ public actor ContentModStore {
         return mod
     }
 
+    public func checkedPackageURL(_ mod: ContentMod) throws -> URL {
+        let root = directory.standardizedFileURL
+        try requireDirectory(root)
+        let package = packageURL(mod).standardizedFileURL
+        try checkParents(of: package, inside: root)
+        try requireDirectory(package)
+        return package
+    }
+
+    /// Reads only registered imported copies. Removed entries and backups are never rediscovered.
+    public func scan(_ mods: [ContentMod]) throws -> ModLibraryScan {
+        guard Set(mods.map(\.id)).count == mods.count else { throw FeatureError.message("The mod library has duplicate records.") }
+        var updated = mods
+        var issues: [ModLibraryIssue] = []
+        var claims: [String: (path: String, indices: [Int])] = [:]
+        for index in mods.indices {
+            try Task.checkCancellation()
+            let mod = mods[index]
+            do {
+                let files = try modFiles(checkedPackageURL(mod))
+                updated[index].fileCount = files.count
+                for path in files {
+                    let key = path.lowercased()
+                    if var claim = claims[key] {
+                        if !claim.indices.contains(index) { claim.indices.append(index) }
+                        claims[key] = claim
+                    } else { claims[key] = (path, [index]) }
+                }
+            } catch is CancellationError { throw CancellationError() }
+            catch { issues.append(ModLibraryIssue(id: mod.id, name: mod.name, message: error.localizedDescription)) }
+        }
+        let overlaps = claims.values.filter { $0.indices.count > 1 }.map { claim in
+            ModLibraryConflict(path: claim.path, modIDs: claim.indices.map { mods[$0].id }, names: claim.indices.map { mods[$0].name })
+        }.sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+        return ModLibraryScan(mods: updated, issues: issues, overlaps: overlaps)
+    }
+
     public func hasBackup(_ installation: RobloxInstallation) -> Bool {
         fm.fileExists(atPath: backupFolder(installation).appendingPathComponent("manifest.json").path)
     }
@@ -147,7 +184,7 @@ public actor ContentModStore {
         try fm.copyItem(at: backup.appendingPathComponent("Resources"), to: stage)
         var claimed = Set<String>()
         for mod in mods where mod.enabled {
-            let package = directory.appendingPathComponent("packages/\(mod.id.uuidString)")
+            let package = try checkedPackageURL(mod)
             for path in try modFiles(package) {
                 guard claimed.insert(path.lowercased()).inserted else {
                     throw FeatureError.message("Two enabled mods replace \(path). Disable one before applying.")
@@ -199,11 +236,17 @@ public actor ContentModStore {
     private func modFiles(_ source: URL) throws -> [String] {
         try requireDirectory(source)
         let root = source.standardizedFileURL.resolvingSymlinksInPath()
-        guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles], errorHandler: { _, _ in false }) else { throw EngineError.unsafePath }
+        var enumerationError: Error?
+        guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles], errorHandler: { _, error in
+            enumerationError = error
+            return false
+        }) else { throw EngineError.unsafePath }
         var result: [String] = []
+        var paths = Set<String>()
         var bytes = 0
         let extensions: Set<String> = ["png", "jpg", "jpeg", "webp", "bmp", "tga", "dds", "ktx", "ktx2", "ogg", "mp3", "wav", "ttf", "otf", "json"]
         for case let url as URL in enumerator {
+            try Task.checkCancellation()
             let attributes = try fm.attributesOfItem(atPath: url.path)
             let type = attributes[.type] as? FileAttributeType
             guard type == .typeRegular || type == .typeDirectory else { throw EngineError.unsafePath }
@@ -212,10 +255,12 @@ public actor ContentModStore {
             guard ["content/", "PlatformContent/", "ExtraContent/"].contains(where: { path.hasPrefix($0) }), extensions.contains(url.pathExtension.lowercased()) else {
                 throw FeatureError.message("Unsupported mod file: \(path). Use textures, sounds, fonts, or JSON under content, PlatformContent, or ExtraContent.")
             }
+            guard paths.insert(path.lowercased()).inserted else { throw FeatureError.message("A mod contains resource paths that differ only by letter case.") }
             bytes += (attributes[.size] as? NSNumber)?.intValue ?? 0
             guard bytes <= 536_870_912, result.count < 10_000 else { throw FeatureError.message("A mod must contain at most 10,000 files and 512 MB of content.") }
             result.append(path)
         }
+        if let enumerationError { throw enumerationError }
         guard !result.isEmpty else { throw FeatureError.message("The folder has no mod content. Choose a folder whose children mirror Roblox’s Resources folder.") }
         return result.sorted()
     }
