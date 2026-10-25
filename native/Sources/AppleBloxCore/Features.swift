@@ -38,13 +38,14 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public var checkUpdatesOnOpen = false
     public var automaticUpdates = false
     public var newPlayerInstance = false
+    public var experimentalFPSWorkaround = false
     public var quitAfterGame = false
     public var quitLauncherWithPlayer = false
     public var returnToWebsite = false
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case serverLocation, serverJoinedNotifications, notificationSounds, bloxstrapSDK, gameControlledPresence, legacyResolution, mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordPlayTime, discordGameActivity, discordArtwork, discordGameButton, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
+        case experimentalFPSWorkaround, serverLocation, serverJoinedNotifications, notificationSounds, bloxstrapSDK, gameControlledPresence, legacyResolution, mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordPlayTime, discordGameActivity, discordArtwork, discordGameButton, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
     }
 
     public init(from decoder: any Decoder) throws {
@@ -69,6 +70,7 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
         trackHistory = try values.decodeIfPresent(Bool.self, forKey: .trackHistory) ?? trackHistory
         checkUpdatesOnOpen = try values.decodeIfPresent(Bool.self, forKey: .checkUpdatesOnOpen) ?? checkUpdatesOnOpen
         automaticUpdates = try values.decodeIfPresent(Bool.self, forKey: .automaticUpdates) ?? automaticUpdates
+        experimentalFPSWorkaround = try values.decodeIfPresent(Bool.self, forKey: .experimentalFPSWorkaround) ?? false
         newPlayerInstance = try values.decodeIfPresent(Bool.self, forKey: .newPlayerInstance) ?? newPlayerInstance
         quitAfterGame = try values.decodeIfPresent(Bool.self, forKey: .quitAfterGame) ?? quitAfterGame
         quitLauncherWithPlayer = try values.decodeIfPresent(Bool.self, forKey: .quitLauncherWithPlayer) ?? quitLauncherWithPlayer

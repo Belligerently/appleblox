@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct AppleBloxApp: App {
     @State private var model = LauncherModel()
+    @NSApplicationDelegateAdaptor(LauncherAppDelegate.self) private var appDelegate
 
     init() {
         if let url = Bundle.main.url(forResource: "AppIcon-BlueLeaf-Charcoal", withExtension: "icns"),
@@ -15,6 +16,7 @@ struct AppleBloxApp: App {
     var body: some Scene {
         Window("AppleBlox Native", id: "compact-launcher") {
             ContentView(model: model)
+                .onAppear { [model] in appDelegate.prepareToQuit = { [weak model] in model?.stopFPSWorkaround() ?? true } }
                 .modifier(AppAppearance(settings: model.configuration.appearance))
                 .tint(AppleBloxTheme.primary)
         }

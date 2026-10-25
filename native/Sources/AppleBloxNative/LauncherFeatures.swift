@@ -16,6 +16,7 @@ extension LauncherModel {
             }
             if !next.features.needsLogTracking {
                 finishCurrentSession()
+                needsPlayerLogBaseline = true
                 Task { await logReader.reset() }
             }
             if !next.features.discordPresence { Task { await discord.disconnect() }; discordStatus = "Off" }
@@ -72,8 +73,10 @@ extension LauncherModel {
     }
 
     func prepareFeatureLaunch(_ installation: RobloxInstallation) async throws {
-        if !isRunning && (configuration.features.trackHistory || configuration.features.discordPresence || configuration.features.quitAfterGame) {
+        if !isRunning && configuration.features.needsLogTracking {
+            await logReader.reset()
             _ = try? await logReader.poll(directory: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Roblox"))
+            needsPlayerLogBaseline = false
         }
         if let id = configuration.features.selectedAccountID {
             guard !isRunning else { throw FeatureError.message("Quit Roblox before launching with a selected account.") }
@@ -493,6 +496,7 @@ extension LauncherModel {
         catch { canSaveHistory = false; record("History file is unreadable and has been preserved.") }
         var lastUpdateCheck = Date.distantPast
         while !Task.isCancelled {
+            updateRunningStatus()
             if (configuration.features.checkUpdatesOnOpen || configuration.features.automaticUpdates), !isBusy, Date().timeIntervalSince(lastUpdateCheck) > 3600 {
                 lastUpdateCheck = Date()
                 await checkForUpdates()
@@ -501,11 +505,19 @@ extension LauncherModel {
                     await installRobloxUpdate(at: installation.url)
                 }
             }
-            if configuration.features.needsLogTracking {
+            if needsPlayerLogBaseline, playerInstances.count <= 1, configuration.features.needsLogTracking {
+                await logReader.reset()
+                let logs = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Roblox")
+                _ = try? await logReader.poll(directory: logs)
+                needsPlayerLogBaseline = false
+            }
+            if !playerInstances.canTrackOneGame {
+                if currentSession != nil { finishCurrentSession() }
+            } else if configuration.features.needsLogTracking {
                 do {
                     let logs = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Roblox")
                     for event in try await logReader.poll(directory: logs) {
-                        guard isRunning, configuration.features.needsLogTracking else { break }
+                        guard playerInstances.canTrackOneGame, configuration.features.needsLogTracking else { break }
                         switch event {
                         case .joining(let placeID):
                             finishCurrentSession()
@@ -547,7 +559,7 @@ extension LauncherModel {
             refreshPresenceArtworkIfNeeded()
             if configuration.features.discordPresence {
                 do {
-                    try await discord.update(clientID: configuration.features.discordClientID, session: currentSession, running: isRunning, options: configuration.features.discordOptions, game: currentGameDetails, custom: gamePresence, artwork: gamePresenceArtwork)
+                    try await discord.update(clientID: configuration.features.discordClientID, session: currentSession, running: isRunning, options: configuration.features.discordOptions, game: currentGameDetails, custom: gamePresence, artwork: gamePresenceArtwork, runningPlayers: playerInstances.count)
                     discordStatus = isRunning ? "Connected to Discord" : "Waiting for Roblox"
                 } catch { discordStatus = error.localizedDescription }
             } else { await discord.disconnect() }
@@ -556,6 +568,7 @@ extension LauncherModel {
         gameDetailsTask?.cancel(); gameDetailsTask = nil; gameDetailsLookupID = nil
         resetGamePresence()
         resetServerActivity()
+        if fpsSession.active { stopFPSWorkaround() }
         await discord.disconnect()
     }
 }

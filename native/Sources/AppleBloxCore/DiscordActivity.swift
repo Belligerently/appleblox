@@ -40,12 +40,14 @@ public struct DiscordActivity: Encodable, Equatable, Sendable {
     public private(set) var assets: Assets?
     public let buttons: [Button]?
 
-    public init(session: PlaySession?, game: GameDetails? = nil, options: DiscordPresenceOptions = .init(), custom: BloxstrapPresenceState? = nil, artwork: [String: URL] = [:]) {
+    public init(session: PlaySession?, game: GameDetails? = nil, options: DiscordPresenceOptions = .init(), custom: BloxstrapPresenceState? = nil, artwork: [String: URL] = [:], runningPlayers: Int = 1) {
+        let multiplePlayers = runningPlayers > 1
+        let session = multiplePlayers ? nil : session
         // Reject stale metadata and malformed place IDs rather than publishing a different game's identity.
         let placeID = session.flatMap { try? GameShortcut(name: "Game", placeID: $0.placeID).placeID }
         let metadata = game.flatMap { $0.isValid && $0.placeID == placeID ? $0 : nil }
         let revealGame = options.showGameActivity && session != nil && placeID != nil
-        details = revealGame ? Self.text(session?.name ?? "", fallback: "Playing Roblox") : (session == nil ? "Browsing Roblox" : "Playing Roblox")
+        details = multiplePlayers ? "Multiple Roblox Players" : revealGame ? Self.text(session?.name ?? "", fallback: "Playing Roblox") : (session == nil ? "Browsing Roblox" : "Playing Roblox")
         if revealGame, options.showArtwork, let creator = metadata?.creator.trimmingCharacters(in: .whitespacesAndNewlines), !creator.isEmpty {
             state = Self.text("by " + creator, fallback: "Playing with AppleBlox Native")
         } else { state = "Playing with AppleBlox Native" }

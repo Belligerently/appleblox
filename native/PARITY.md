@@ -11,12 +11,12 @@ Compared against all seven images in the [upstream README gallery](https://githu
 - [x] Optional Discord game-page button — public game page, not a server join/invite
 - [x] Return to Roblox’s website after the last Player closes — optional, defaults off
 - [x] Automatically exit AppleBlox after the last Player closes — optional, defaults off; saves tracked history and stays open during file/launch/install operations
-- [ ] Improve and verify multiple-instance support — standard macOS new-instance request exists
-- [ ] FPS unlock control
-- [ ] Lighting-technology selection
+- [x] Improved multiple-instance handling — process snapshots, new/reused/replaced/unconfirmed launch outcomes, per-Player management, last-Player cleanup, and paused ambiguous game activity; real concurrent-session acceptance remains pending
+- [x] Experimental FPS workaround control — default-off temporary 240 Hz mirrored display, single online display, main-thread cleanup and rollback; real display/FPS behavior remains unverified
+- [ ] Lighting-technology selection — unavailable under the inherited local-client allowlist; removed from the current original app
 - [x] Voxel-shadow toggle — opt-in voxelizer pause; not a promise to disable every shadow type
 - [x] Separate graphics-quality and render-distance controls — independent base-quality override and CSG object-detail distances; streamed object loading remains game-controlled
-- [ ] Visual-effects toggle
+- [ ] Visual-effects toggle — old general post-processing flag is unavailable under the inherited allowlist
 - [x] Review missing graphics API options — restored the original Vulkan request as experimental alongside Default, Metal, and OpenGL; runtime backend support remains unverified
 - [x] Visual FastFlag rows with value editing and enable/disable switches
 - [x] FastFlag search
@@ -25,7 +25,17 @@ Compared against all seven images in the [upstream README gallery](https://githu
 - [x] Legacy Resolution mode for mods — opt-in fresh-launch arguments, defaults off; voice chat may be unavailable
 - [x] Mod installation guide and community links — native folder instructions, fork support, upstream community, GameBanana, and Bloxstrap resource guide
 - [x] Mods-folder rescan — validates registered imported copies, refreshes counts, and reports enabled conflicts; new packs still use Import
-- [ ] Live Discord display verification
+- [ ] Live Discord display verification — deferred; real Player/Discord acceptance must be performed separately
+
+## Final screenshot-item audit
+
+Status: **21 implemented (some experimental), two unavailable with current Roblox flags, and one live Discord check pending**. This is not a claim that all 24 features passed real-game acceptance.
+
+FPS now has an explicit opt-in confirmation under Engine, separate from engine flag profiles. It uses an independently implemented small Objective-C runtime bridge for the same private `CGVirtualDisplay` approach described by [AppleBlox’s helper](https://github.com/AppleBlox/virtualdisplay). Native launch/ownership/lifecycle logic remains Swift. The bridge checks selector availability without creating a display. It starts only for a fresh Player, requires one online display without existing mirroring, requests a matching Retina/pixel mode at 240 Hz, and keeps the original physical mode for restoration. Failed launches with no remaining Player, last-Player exit, service/window shutdown, manual Stop, and normal app quit request restoration. Failed restoration retains ownership for retry and blocks ordinary app termination. Forced termination, OS changes, hotplug behavior and actual FPS still require live acceptance; a 240 Hz virtual mode does not guarantee 240 FPS. No FPS FastFlag bypass was added. Unit tests use fake display drivers; the real bridge test only probes availability and stops an inactive object.
+
+Player tracking uses process-ID sets instead of a single Boolean. Launch Services results are checked after a short asynchronous settle period and distinguish a new process, a reused existing Player, replacement of prior Players, and an unconfirmed result. Integrations shows a count plus per-Player Show/Quit actions. Closing one of several Players does not trigger last-Player actions. New-instance launching remains best effort with shared Player login; no client restrictions are bypassed. Per-game history, SDK data, server alerts and game-specific Discord fields pause with multiple Players to avoid mixing sessions. Tracking resumes after a new single-Player join, with a fresh baseline. Per-file log cursors retain partial lines and prevent old joins being replayed when the newest file changes. Symlinked logs are ignored.
+
+Lighting selection and a general effects/post-processing toggle are not implemented as inert controls: their old flags are absent from the inherited allowlist, and the [current upstream engine page](https://github.com/AppleBlox/appleblox/blob/main/frontend/src/windows/main/pages/Engine.svelte) no longer includes them. [Bloxstrap’s v2.10.0 notes](https://bloxstraplabs.com/versions/2.10.0/) document the corresponding removed controls. Engine → Feature Support explains these limitations and the experimental FPS/instance behavior. Existing sky, texture, CSG detail and voxelizer options remain distinct supported flag requests. Revisit only if Roblox provides a supported mechanism.
 
 ## Server activity and original-profile import cluster
 
@@ -72,6 +82,11 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 - [x] Appearance-only reset already exists under More → Appearance.
 
 ## Acceptance checks
+
+- [x] Isolated runtime UI: FPS defaults off, confirmation explains future display changes, Cancel keeps it off, Feature Support sheet is readable, and ordinary quit works with the display inactive. Navigation to the new instance-management UI was interrupted, so live instance controls remain unverified. No Player launch or virtual-display creation occurred.
+
+- [x] Runtime unit checks: new/reused/replaced/exited process outcomes, last-exit policy, simulated FPS ownership/rollback/failed-restoration retry, off-by-default migration, inert native bridge probe/stop, multiple-Player presence privacy, switching log files without replay, preserved partial lines, reset baselines and symlink exclusion.
+- [ ] Live runtime acceptance: actual second Player creation/reuse/replacement, per-Player window actions, 240 Hz mode/FPS, normal/failed launch restoration, quit/hotplug behavior, and Discord display. These tests were deliberately deferred; no Player was launched and no real virtual display was created during this phase.
 
 - [x] Isolated server/import UI: off-by-default controls and provider disclosure, permission-not-requested status, disabled sound control, readable global/game import review and warning, Cancel preserving exact settings bytes, imported disabled rows, existing game identity/title preservation, unchanged selected profile/automatic apply, and persisted imported games/lookup preference after restart. Native notification permission was not requested. A recent existing Player log’s server-entry shape matched the parser without sending its IP anywhere.
 

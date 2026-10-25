@@ -7,8 +7,10 @@ let package = Package(
     products: [.executable(name: "AppleBloxNative", targets: ["AppleBloxNative"])],
     targets: [
         .target(name: "AppleBloxCore"),
-        .executableTarget(name: "AppleBloxNative", dependencies: ["AppleBloxCore"]),
-        .testTarget(name: "AppleBloxCoreTests", dependencies: ["AppleBloxCore"])
+        .target(name: "DisplayBridge", publicHeadersPath: "include", cSettings: [.unsafeFlags(["-fobjc-arc"])],
+                linkerSettings: [.linkedFramework("Foundation"), .linkedFramework("CoreGraphics")]),
+        .executableTarget(name: "AppleBloxNative", dependencies: ["AppleBloxCore", "DisplayBridge"]),
+        .testTarget(name: "AppleBloxCoreTests", dependencies: ["AppleBloxCore", "DisplayBridge"])
     ],
     swiftLanguageModes: [.v6]
 )

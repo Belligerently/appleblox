@@ -31,38 +31,51 @@ public enum PlayerLogEvent: Equatable, Sendable {
 }
 
 public actor PlayerLogReader {
-    private var file: URL?
-    private var offset: UInt64 = 0
-    private var remainder = Data()
+    private struct Cursor { var offset: UInt64 = 0; var remainder = Data() }
+    private var cursors: [URL: Cursor] = [:]
     private var didBaseline = false
     public init() {}
-    public func reset() { file = nil; offset = 0; remainder = Data(); didBaseline = false }
+    public func reset() { cursors = [:]; didBaseline = false }
     public func poll(directory: URL, now: Date = Date()) throws -> [PlayerLogEvent] {
+        try Task.checkCancellation()
         let fm = FileManager.default
         guard fm.fileExists(atPath: directory.path) else { didBaseline = true; return [] }
-        let candidates = try fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.contentModificationDateKey])
+        let urls = try fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey, .isSymbolicLinkKey])
             .filter { $0.pathExtension == "log" && $0.lastPathComponent.lowercased().contains("player") }
-        let newest = try candidates.map { ($0, try $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate ?? .distantPast) }.max { $0.1 < $1.1 }
-        guard let (latest, modified) = newest, now.timeIntervalSince(modified) < 300 else { didBaseline = true; return [] }
+        guard urls.count <= 5000 else { throw FeatureError.message("Too many Player logs to track safely.") }
+        var candidates: [(URL, Date, UInt64)] = []
+        for url in urls {
+            try Task.checkCancellation()
+            let info = try url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey, .isSymbolicLinkKey])
+            guard info.isSymbolicLink != true else { continue }
+            candidates.append((url, info.contentModificationDate ?? .distantPast, UInt64(max(0, info.fileSize ?? 0))))
+        }
+        if !didBaseline {
+            // Baseline every existing Player log. Returning to an older file must not replay another instance's history.
+            cursors = Dictionary(uniqueKeysWithValues: candidates.map { ($0.0, Cursor(offset: $0.2)) })
+            didBaseline = true
+            return []
+        }
+        guard let (latest, modified, _) = candidates.max(by: { $0.1 < $1.1 }), now.timeIntervalSince(modified) < 300 else { return [] }
+        let existing = Set(candidates.map { $0.0 })
+        cursors = cursors.filter { existing.contains($0.key) }
+        var cursor = cursors[latest] ?? Cursor()
         let handle = try FileHandle(forReadingFrom: latest)
         defer { try? handle.close() }
         let end = try handle.seekToEnd()
-        if file != latest || end < offset {
-            let ignoreExisting = !didBaseline
-            file = latest; offset = ignoreExisting ? end : 0; remainder = Data(); didBaseline = true
-            // Ignore the initial existing log, but read newly created/rotated logs from the beginning.
-            if ignoreExisting { return [] }
-        }
-        try handle.seek(toOffset: offset)
+        if end < cursor.offset { cursor = Cursor() }
+        try handle.seek(toOffset: cursor.offset)
         let data = try handle.read(upToCount: 262_144) ?? Data()
-        offset += UInt64(data.count)
-        remainder.append(data)
-        guard let lastNewline = remainder.lastIndex(of: 10) else {
-            if remainder.count > 262_144 { remainder = Data() }
+        cursor.offset += UInt64(data.count)
+        cursor.remainder.append(data)
+        guard let newline = cursor.remainder.lastIndex(of: 10) else {
+            if cursor.remainder.count > 262_144 { cursor.remainder = Data() }
+            cursors[latest] = cursor
             return []
         }
-        let complete = remainder.prefix(through: lastNewline)
-        remainder = Data(remainder.suffix(from: lastNewline + 1))
+        let complete = cursor.remainder.prefix(through: newline)
+        cursor.remainder = Data(cursor.remainder.suffix(from: newline + 1))
+        cursors[latest] = cursor
         return String(decoding: complete, as: UTF8.self).split(separator: "\n").compactMap { PlayerLogEvent.parse(String($0)) }
     }
 }

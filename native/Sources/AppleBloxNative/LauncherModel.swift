@@ -57,6 +57,11 @@ final class LauncherModel {
     var serverLocationStatus = "Waiting for a new game server connection."
     var notificationStatus = "Permission has not been requested"
     var isRequestingNotifications = false
+    var playerInstances = PlayerInstances([])
+    var needsPlayerLogBaseline = true
+    let fpsSession = FPSWorkaroundSession(driver: NativeDisplayDriver())
+    var fpsActive = false
+    var fpsStatus = "Off"
     var currentSession: PlaySession?
     var currentGameDetails: GameDetails?
     var gameDetailsTask: Task<Void, Never>?
@@ -84,6 +89,7 @@ final class LauncherModel {
             canSave = false
             errorMessage = "Couldn’t read native settings. The file has been preserved. \(error.localizedDescription)"
         }
+        fpsStatus = configuration.features.experimentalFPSWorkaround ? "Will start before the next fresh Player launch." : "Off"
         refresh()
     }
 
@@ -100,7 +106,7 @@ final class LauncherModel {
         }
         installation = RobloxInstallation.discover(candidates: candidates).first
         hasEngineBackup = false
-        isRunning = !NSRunningApplication.runningApplications(withBundleIdentifier: RobloxInstallation.bundleIdentifier).isEmpty
+        updateRunningStatus()
         status = installation == nil ? "Roblox not found" : (isRunning ? "Roblox is running" : "Ready to launch")
         record(installation.map { "Detected Roblox \($0.version)." } ?? "No Roblox Player found. Choose an installation to continue.")
         Task { await refreshEngineBackup() }
@@ -108,15 +114,20 @@ final class LauncherModel {
     }
 
     func updateRunningStatus() {
-        let running = !NSRunningApplication.runningApplications(withBundleIdentifier: RobloxInstallation.bundleIdentifier).isEmpty
-        let playerClosed = isRunning && !running
-        if running != isRunning {
-            record(running ? "Roblox started." : "Roblox quit.")
-            if !running { finishCurrentSession() }
+        let next = PlayerInstances(Set(NSRunningApplication.runningApplications(withBundleIdentifier: RobloxInstallation.bundleIdentifier).map(\.processIdentifier)))
+        let lastClosed = next.lastPlayerClosed(comparedTo: playerInstances)
+        if next != playerInstances {
+            if next.count > 0 && playerInstances.count > 0 { needsPlayerLogBaseline = true }
+            record("Roblox Players running: \(next.count).")
+            finishCurrentSession()
         }
-        isRunning = running
-        status = installation == nil ? "Roblox not found" : (running ? "Roblox is running" : "Ready to launch")
-        if playerClosed { handlePlayerExit() }
+        playerInstances = next
+        isRunning = next.count > 0
+        status = installation == nil ? "Roblox not found" : (isRunning ? "Roblox is running (\(next.count))" : "Ready to launch")
+        if lastClosed {
+            guard stopFPSWorkaround() else { return }
+            handlePlayerExit()
+        }
     }
 
     func quitRoblox() {
@@ -187,6 +198,8 @@ final class LauncherModel {
         guard !isBusy else { return }
         updateRunningStatus()
         isLaunching = true
+        let before = playerInstances
+        var startedDisplayHere = false
         defer { isLaunching = false }
         do {
             guard let installation else { throw InstallationError.missingInstallation }
@@ -194,6 +207,9 @@ final class LauncherModel {
             let requestedURL = try link?.url ?? shortcut?.validated().launchURL
             let plan = try PlayerLaunchPlan(url: requestedURL, legacyResolution: configuration.features.legacyResolution,
                                             newInstance: configuration.features.newPlayerInstance, playerRunning: isRunning)
+            startedDisplayHere = try fpsSession.prepare(enabled: configuration.features.experimentalFPSWorkaround, players: before)
+            fpsActive = fpsSession.active
+            if fpsActive { fpsStatus = "Temporary 240 Hz display active while Players are running." }
             let mappedGame = shortcut ?? link?.placeID.flatMap { id in configuration.shortcuts.first { $0.placeID == id } }
             let linkedProfile = mappedGame?.engineProfileID.flatMap { id in configuration.engine.profiles.first { $0.id == id } }
             if (configuration.engine.applyOnLaunch || linkedProfile != nil) && !isRunning {
@@ -210,17 +226,36 @@ final class LauncherModel {
             options.activates = true
             options.createsNewApplicationInstance = plan.createsNewInstance
             options.arguments = plan.arguments
+            let application: NSRunningApplication
             if let url = plan.urlToOpen {
-                _ = try await NSWorkspace.shared.open([url], withApplicationAt: verified.url, configuration: options)
+                application = try await NSWorkspace.shared.open([url], withApplicationAt: verified.url, configuration: options)
             } else {
-                _ = try await NSWorkspace.shared.openApplication(at: verified.url, configuration: options)
+                application = try await NSWorkspace.shared.openApplication(at: verified.url, configuration: options)
             }
-            isRunning = !NSRunningApplication.runningApplications(withBundleIdentifier: RobloxInstallation.bundleIdentifier).isEmpty
-            status = "Opened Roblox"
-            record(shortcut.map { "Sent launch request for \($0.name)." } ?? "Opened Roblox Player.")
+            // A Launch Services return value alone doesn't prove a second Player remained alive.
+            try await Task.sleep(for: .milliseconds(750))
+            updateRunningStatus()
+            let outcome = PlayerLaunchOutcome.evaluate(requestNew: plan.createsNewInstance, before: before.ids,
+                                                       after: playerInstances.ids, reportedPID: application.processIdentifier)
+            switch outcome {
+            case .opened: status = "Opened Roblox"
+            case .newInstance: status = "Opened a new Roblox Player"
+            case .replacedExisting: status = "Roblox opened a new Player and closed the previous Players"
+            case .reusedExisting: status = "Roblox reused an existing Player"
+            case .unconfirmed:
+                status = "Player launch could not be confirmed"
+                try fpsSession.launchFailed(startedHere: startedDisplayHere, players: playerInstances)
+                fpsActive = fpsSession.active
+            }
+            record(status)
         } catch {
+            let launchError = error
+            updateRunningStatus()
+            do { try fpsSession.launchFailed(startedHere: startedDisplayHere || fpsSession.active, players: playerInstances) }
+            catch { report(error) }
+            fpsActive = fpsSession.active
             status = "Launch failed"
-            report(error)
+            report(launchError)
         }
     }
 

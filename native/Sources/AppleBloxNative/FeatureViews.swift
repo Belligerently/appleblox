@@ -206,7 +206,16 @@ struct IntegrationsView: View {
                 Text("Quits after the last Player instance closes. AppleBlox stays open if a launch, install, or file operation is in progress.")
                     .font(.caption).foregroundStyle(.secondary)
                 featureToggle("Request a new Player instance", \.newPlayerInstance)
-                Text("New instances use macOS’s standard launch option. Roblox may still restrict simultaneous sessions; separate instances share Player’s login.")
+                HStack {
+                    LabeledContent("Running Players", value: String(model.playerInstances.count))
+                    Menu("Manage") {
+                        ForEach(Array(model.playerInstances.ids.sorted().enumerated()), id: \.element) { index, pid in
+                            Button("Show Player \(index + 1)") { model.activatePlayer(pid) }
+                            Button("Quit Player \(index + 1)") { model.quitPlayer(pid) }
+                        }
+                    }.disabled(model.playerInstances.count == 0 || model.isBusy)
+                }
+                Text("Roblox may reuse or close additional Players; launch status reports what remained running. Instances share Player’s login. Game-specific history, server alerts and presence pause while multiple Players run, and resume at the next single-Player game join.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Browser links") {

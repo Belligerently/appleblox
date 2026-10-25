@@ -13,6 +13,8 @@ struct EngineView: View {
     @State private var draft: EngineDraft?
     @State private var confirmRestore = false
     @State private var confirmDelete = false
+    @State private var confirmFPS = false
+    @State private var showCompatibility = false
     @Environment(\.colorScheme) private var colorScheme
 
     private var profile: EngineProfile? { model.configuration.engine.selectedProfile }
@@ -25,6 +27,7 @@ struct EngineView: View {
                 Menu {
                     Button("New Profile…", systemImage: "plus") { draft = EngineDraft(profile: EngineProfile(name: "New Profile")) }
                     Button("Import JSON…", systemImage: "square.and.arrow.down", action: importProfile)
+                    Button("Feature Support…", systemImage: "info.circle") { showCompatibility = true }
                     Divider()
                     Button("Export Flags…", systemImage: "square.and.arrow.up", action: model.exportEngineProfile)
                     Button("Delete Profile…", role: .destructive) { confirmDelete = true }
@@ -65,6 +68,19 @@ struct EngineView: View {
                         .padding(10).frame(maxWidth: .infinity, alignment: .leading)
                         .background(AppleBloxTheme.card(for: colorScheme).opacity(0.75), in: .rect(cornerRadius: 14))
                     }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle("Experimental FPS workaround (240 Hz)", isOn: Binding(
+                            get: { model.configuration.features.experimentalFPSWorkaround },
+                            set: { if $0 { confirmFPS = true } else { model.setFPSWorkaround(false) } }
+                        ))
+                        .disabled(!model.canSave || busy || (!model.fpsAvailable && !model.configuration.features.experimentalFPSWorkaround))
+                        Text(model.fpsAvailable ? "Creates a temporary mirrored display before a fresh Player launch. One online display only; may flicker or affect scaling. It cannot guarantee higher FPS. Stops after the last Player closes or AppleBlox quits." : "The temporary-display API is unavailable on this macOS version.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        if model.configuration.features.experimentalFPSWorkaround || model.fpsActive {
+                            Text(model.fpsStatus).font(.caption).foregroundStyle(.secondary)
+                        }
+                        if model.fpsActive { Button("Stop FPS Workaround") { model.stopFPSWorkaround() }.controlSize(.small) }
+                    }
                     Toggle("Apply selected profile before launch", isOn: Binding(
                         get: { model.configuration.engine.applyOnLaunch }, set: model.setApplyEngineOnLaunch
                     ))
@@ -94,6 +110,12 @@ struct EngineView: View {
             .controlSize(.small)
         }
         .sheet(item: $draft) { EngineProfileEditor(model: model, profile: $0.profile) }
+        .sheet(isPresented: $showCompatibility) { EngineCompatibilityView() }
+        .confirmationDialog("Enable the experimental FPS workaround?", isPresented: $confirmFPS, titleVisibility: .visible) {
+            Button("Enable for Future Launches") { model.setFPSWorkaround(true) }
+        } message: {
+            Text("At the next fresh Player launch, AppleBlox will create a temporary 240 Hz display and mirror your single physical display to it. Scaling or window positions may change. Keep AppleBlox open while using it; Stop FPS Workaround restores the original mode. This uses a private macOS API and remains unverified on your hardware.")
+        }
         .confirmationDialog("Restore the original Roblox settings?", isPresented: $confirmRestore, titleVisibility: .visible) {
             Button("Restore Original") { Task { await model.restoreEngineSettings() } }
         } message: { Text("This restores the file from before the first Apply and turns off Apply on launch. Your profiles are kept.") }
