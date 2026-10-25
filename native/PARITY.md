@@ -75,6 +75,8 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 
 ## Native maintenance (outside the screenshot audit)
 
+- [x] Audit original Appearance, Misc, and Info source and nested controls — see [SOURCE-PARITY.md](SOURCE-PARITY.md) for the resulting backlog.
+
 - [x] Optional notification sound control from the original Misc page; alternative AppleScript notifications remain unported.
 
 - [x] Copy a fixed-field diagnostics report without account data, names, paths, URLs, raw logs, or activity messages.
@@ -113,4 +115,4 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 - [ ] Confirm launcher remains open during an in-progress operation and when final history saving fails.
 - [ ] Verify in-game icon recoloring and authenticated account switching.
 
-The Appearance, Misc, and Info page contents were not shown in the gallery and need a separate source audit. The online Workshop, server-region selection, background updates while the launcher is closed, and native self-updating also remain outside this screenshot checklist. See README.md for implemented functionality and limitations.
+The Appearance, Misc, and Info source audit is complete; [SOURCE-PARITY.md](SOURCE-PARITY.md) lists native equivalents, partial mappings, and the exact remaining implementation gaps. The online Workshop, server-region selection, background updates while the launcher is closed, and native self-updating also remain outside this screenshot checklist. See README.md for implemented functionality and limitations.

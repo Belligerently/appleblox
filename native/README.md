@@ -124,3 +124,7 @@ See [PARITY.md](PARITY.md) for the screenshot audit, completed ports, and remain
 More → Diagnostics → ••• offers Copy Diagnostics and Clear Game Details Cache. The copied report contains only app/macOS/Player versions, architecture, running/readability states, library/cache counts, and backup-availability flags. It excludes account/session data, game/profile names, local paths, URLs, raw logs, and activity messages; copying is local and does not submit a report.
 
 Cache clearing requires confirmation and clears saved names, creators, and thumbnail links in memory and game-details-cache.json. Older in-flight requests are invalidated before they can refill it. Disk-write failures retain the existing cache. Saved games, engine profiles, mods, backups, accounts, history, and Player files are unchanged. macOS HTTP/image caches are unaffected; future lookups can refill public details. Appearance-only reset remains under More → Appearance.
+
+## Additional source parity audit
+
+The original Appearance, Misc/System and Info pages have been audited separately from the seven screenshots. See [SOURCE-PARITY.md](SOURCE-PARITY.md) for exact gaps in launcher-icon customization, custom/bootstrapper themes, persistent native logs, support-bundle export, full reset, resource shortcuts and expanded About content. Completed auditing does not mean those features are implemented.
