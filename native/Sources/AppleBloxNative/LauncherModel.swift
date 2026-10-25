@@ -72,12 +72,20 @@ final class LauncherModel {
     var historyRevision = 0
     var discordStatus = "Off"
     var maintenanceStatus = ""
+    let launcherLogs: LauncherLogStore
+    let supportExporter = SupportBundleExporter()
+    var supportBundleReview: SupportBundleDraft?
+    var launcherLogTask: Task<Void, Never>?
+    var launcherLogWriteID: UUID?
+    var canWriteLauncherLogs = true
+    var launcherLogStatus = "Saved events exclude raw activity messages."
     var isQuittingAfterPlayer = false
     var legacyImportReview: LegacyProfileImportPlan?
     var pendingLink: LaunchLink?
     var isBusy: Bool { isLaunching || isApplyingEngine || isWorkingFeature }
 
     init(directory: URL = ConfigurationStore.defaultDirectory()) {
+        launcherLogs = LauncherLogStore(dataDirectory: directory)
         store = ConfigurationStore(directory: directory)
         clientSettings = ClientSettingsStore(directory: directory.appendingPathComponent("engine-backups", isDirectory: true))
         modStore = ContentModStore(directory: directory.appendingPathComponent("mods", isDirectory: true))
@@ -90,6 +98,7 @@ final class LauncherModel {
             errorMessage = "Couldn’t read native settings. The file has been preserved. \(error.localizedDescription)"
         }
         fpsStatus = configuration.features.experimentalFPSWorkaround ? "Will start before the next fresh Player launch." : "Off"
+        record("AppleBlox Native started.", event: .appStarted)
         refresh()
     }
 
@@ -108,7 +117,7 @@ final class LauncherModel {
         hasEngineBackup = false
         updateRunningStatus()
         status = installation == nil ? "Roblox not found" : (isRunning ? "Roblox is running" : "Ready to launch")
-        record(installation.map { "Detected Roblox \($0.version)." } ?? "No Roblox Player found. Choose an installation to continue.")
+        record(installation.map { "Detected Roblox \($0.version)." } ?? "No Roblox Player found. Choose an installation to continue.", event: .playerDetected, count: installation == nil ? 0 : 1)
         Task { await refreshEngineBackup() }
         Task { await refreshModBackup() }
     }
@@ -118,7 +127,7 @@ final class LauncherModel {
         let lastClosed = next.lastPlayerClosed(comparedTo: playerInstances)
         if next != playerInstances {
             if next.count > 0 && playerInstances.count > 0 { needsPlayerLogBaseline = true }
-            record("Roblox Players running: \(next.count).")
+            record("Roblox Players running: \(next.count).", event: .playerCountChanged, count: next.count)
             finishCurrentSession()
         }
         playerInstances = next
@@ -198,6 +207,7 @@ final class LauncherModel {
         guard !isBusy else { return }
         updateRunningStatus()
         isLaunching = true
+        record("Requested a Player launch.", event: .launchRequested)
         let before = playerInstances
         var startedDisplayHere = false
         defer { isLaunching = false }
@@ -217,7 +227,7 @@ final class LauncherModel {
                 try await clientSettings.apply(configuration.engine.resolvedFlags(for: profile.id), to: verified)
                 await refreshEngineBackup()
                 engineStatus = "Applied \(profile.name) before launch."
-                record(engineStatus)
+                record(engineStatus, event: .engineApplied)
             } else if configuration.engine.applyOnLaunch {
                 record("Using the running Player. Engine changes apply to the next fresh Roblox session.")
             }
@@ -247,7 +257,7 @@ final class LauncherModel {
                 try fpsSession.launchFailed(startedHere: startedDisplayHere, players: playerInstances)
                 fpsActive = fpsSession.active
             }
-            record(status)
+            record(status, event: .launchCompleted)
         } catch {
             let launchError = error
             updateRunningStatus()
@@ -289,7 +299,7 @@ final class LauncherModel {
         } else { next.engine.profiles.append(profile) }
         next.engine.selectedProfileID = profile.id
         try persist(next)
-        record("Saved engine profile: \(profile.name).")
+        record("Saved engine profile: \(profile.name).", event: .profileSaved)
     }
 
     func selectEngineProfile(_ id: UUID) {
@@ -329,7 +339,7 @@ final class LauncherModel {
         do {
             try await clientSettings.apply(profile.resolvedFlags(), to: installation)
             engineStatus = "Applied \(profile.name). Ready for the next Roblox launch."
-            record(engineStatus)
+            record(engineStatus, event: .engineApplied)
         } catch { report(error) }
         await refreshEngineBackup()
     }
@@ -348,7 +358,7 @@ final class LauncherModel {
             try persist(next)
             try await clientSettings.restore(installation)
             engineStatus = "Restored the original settings. Apply on launch is off."
-            record(engineStatus)
+            record(engineStatus, event: .engineRestored)
         } catch { report(error) }
         await refreshEngineBackup()
     }
@@ -377,15 +387,32 @@ final class LauncherModel {
         }
         try store.save(next)
         configuration = next
+        record("Saved native settings.", event: .settingsSaved)
     }
 
     func report(_ error: Error) {
         errorMessage = error.localizedDescription
-        record("Error: \(error.localizedDescription)")
+        record("Error: \(error.localizedDescription)", event: .operationFailed, failure: SafeLogFailure(error))
     }
 
-    func record(_ message: String) {
+    func record(_ message: String, event: LauncherLogEvent = .activity, count: Int? = nil, failure: SafeLogFailure? = nil) {
         activity.insert(ActivityEntry(message: message), at: 0)
         if activity.count > 100 { activity.removeLast(activity.count - 100) }
+        guard canWriteLauncherLogs else { return }
+        // Preserve UI event order across asynchronous actor writes. Never persist `message`.
+        let previous = launcherLogTask
+        let writeID = UUID()
+        launcherLogWriteID = writeID
+        let date = Date()
+        launcherLogTask = Task { [weak self, launcherLogs] in
+            await previous?.value
+            guard let self, self.canWriteLauncherLogs else { return }
+            do { try await launcherLogs.append(event, count: count, failure: failure, date: date) }
+            catch {
+                self.canWriteLauncherLogs = false
+                self.launcherLogStatus = "Saved logs unavailable. Existing files were preserved; restart to retry."
+            }
+            if self.launcherLogWriteID == writeID { self.launcherLogTask = nil }
+        }
     }
 }

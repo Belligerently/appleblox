@@ -23,9 +23,9 @@ Source: [Misc.svelte](../legacy/frontend/src/windows/main/pages/Misc.svelte). Na
 | Notification Sounds | Implemented | Separate opt-in system sound for native Server Joined alerts. Those are currently the native app's notification type; live sound/permission/Focus acceptance is still pending. |
 | Alternative notifications through AppleScript | Not ported | Native uses UserNotifications with foreground banners. Whether an alternate delivery mechanism is needed remains a product decision; it is not required for the current native service to exist. |
 | Allow fixed loading times | Not ported | No minimum-duration launch/bootstrapper steps. This is a cosmetic timing option, independent of download/install correctness; group with bootstrapper work if retained. |
-| View Logs (AppleBlox's own log directory) | Partial | Native Diagnostics shows in-memory session activity and opens **Roblox's** log directory. Native does not yet persist its own rotating launcher logs or expose an equivalent launcher-log folder. |
+| View Logs (AppleBlox's own log directory) | Implemented / adaptation | Diagnostics → Open Launcher Logs opens the native logs folder. A private atomic journal retains up to four 64 KiB event segments across restarts. Only typed timestamps/codes/counts/numeric errors are saved; raw activity messages remain in memory. Roblox Logs is separate. Corrupt/oversized/linked journals are preserved and writing stops for this session. |
 | Copy Debug Report | Implemented / adaptation | Copy Diagnostics creates a fixed-field report. It deliberately excludes account data, names, paths, URLs, raw logs and activity messages; it is not a full copy of the legacy report's fields. |
-| Export Debug Bundle (configuration, recent launcher logs, custom theme and summary ZIP) | Not ported | No native support-bundle export. Engine JSON export is a separate feature, not a debug bundle or complete settings backup. Define the included data and review flow before implementing this. |
+| Export Debug Bundle (configuration, recent launcher logs, custom theme and summary ZIP) | Implemented / adaptation | Diagnostics → Export Support Bundle reviews exact diagnostics, fixed preference summary, optional saved events, and README before local ZIP export. Unreadable settings/logs are omitted with notes. No raw configuration, arbitrary files, credentials, names/IDs, paths/URLs, engine values, themes, mods or backups are copied. No upload or existing-export replacement. A full settings backup remains separate and unimplemented. |
 | Documentation button | Implemented / adaptation | About and Diagnostics open an offline Native Guide covering launch, profiles, mods, accounts, privacy, updates, restore/troubleshooting and experimental features. It is native content included with the executable, not the legacy documentation site. Source/support links are also available. |
 | AppleBlox Folder | Implemented / adaptation | Diagnostics → Open Native Data Folder opens the separate AppleBlox Native data directory. It correctly does not open or reuse legacy app data. |
 | Roblox Folder (opens selected app's `Contents`) | Implemented | Installation → Open Contents and Diagnostics → Open Player Contents open the selected bundle’s validated folder. The shortcut rechecks Player and rejects symlinked/redirected Contents or a stale bundle before handing it to Finder. |
@@ -50,8 +50,8 @@ The audit is complete; implementation of the missing items is not. These entries
 - [ ] Decide/design portable native custom themes; legacy CSS editing remains unported.
 - [ ] Bootstrapper theme library and renderer, including XML/ZIP assets and library actions.
 - [ ] Decide whether to retain fixed-duration bootstrapper steps.
-- [ ] Persistent native launcher logs and a launcher-log folder action.
-- [ ] Reviewed debug/support-bundle export; decide settings-backup requirements separately.
+- [x] Persistent native launcher logs and a launcher-log folder action.
+- [x] Reviewed debug/support-bundle export; full settings backup remains separate and unimplemented.
 - [ ] Full native reset with recoverable handling of Player backups and saved credentials.
 - [x] Dedicated offline fork documentation and direct validated Player `Contents` shortcuts.
 - [x] Expanded native About credits/inspirations and community/support access.
@@ -59,4 +59,4 @@ The audit is complete; implementation of the missing items is not. These entries
 
 Already tracked elsewhere: online Workshop, server-region selection, background updates while the launcher is closed, and native self-updating. Actual notifications, Discord, FPS/display restoration, simultaneous Players, authenticated accounts and in-game rendering remain acceptance work, not findings that this documentation audit verifies.
 
-Completed cluster: About credits/community, offline documentation and folder shortcuts. Persistent logs plus a reviewed support bundle are the next related implementation phase. Bootstrapper themes and full reset need their own implementation and validation work.
+Completed clusters: About credits/community, offline documentation and folder shortcuts; persistent bounded event logs and reviewed local support ZIP export. Bootstrapper themes, full settings backup and full reset need their own implementation and validation work.

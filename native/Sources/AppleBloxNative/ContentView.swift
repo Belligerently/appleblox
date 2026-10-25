@@ -381,6 +381,9 @@ struct DiagnosticsView: View {
                 PageHeading(title: "Diagnostics", subtitle: model.isRunning ? "Roblox is running" : "Roblox is not running")
                 Button("Roblox Logs", systemImage: "folder", action: model.openRobloxLogs).controlSize(.small)
                 Menu {
+                    Button("Export Support Bundle…", systemImage: "archivebox") { Task { await model.prepareSupportBundle() } }
+                        .disabled(model.isBusy)
+                    Button("Open Launcher Logs", systemImage: "folder") { Task { await model.openLauncherLogs() } }
                     Button("Copy Diagnostics", systemImage: "doc.on.doc") { Task { await model.copyDiagnostics() } }
                     Button("Clear Game Details Cache…", systemImage: "arrow.clockwise") { confirmClearCache = true }
                         .disabled(model.isBusy)
@@ -400,10 +403,13 @@ struct DiagnosticsView: View {
                 .padding(.vertical, 3)
             }
             .listStyle(.plain).scrollContentBackground(.hidden)
-            Text(model.maintenanceStatus.isEmpty ? "Session activity · Running status updates automatically" : model.maintenanceStatus)
+            Text(model.maintenanceStatus.isEmpty ? model.launcherLogStatus : model.maintenanceStatus)
                 .font(.caption).foregroundStyle(.secondary).lineLimit(3)
         }
         .sheet(isPresented: $showNativeGuide) { NativeGuideView() }
+        .sheet(item: Binding(get: { model.supportBundleReview }, set: { model.supportBundleReview = $0 })) { draft in
+            SupportBundleReviewView(model: model, draft: draft)
+        }
         .confirmationDialog("Clear saved game details?", isPresented: $confirmClearCache, titleVisibility: .visible) {
             Button("Clear Game Details Cache") { Task { await model.clearGameDetailsCache() } }
         } message: {

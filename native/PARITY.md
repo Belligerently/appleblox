@@ -75,6 +75,9 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 
 ## Native maintenance (outside the screenshot audit)
 
+- [x] Persistent native event logs and a separate Launcher Logs folder action. One atomic private journal rotates up to four 64 KiB segments; unrelated files are untouched. Timestamps, typed codes, bounded counts and numeric errors only; raw session messages stay in memory.
+- [x] Reviewed local support ZIP: exact file previews, optional events, fixed preference summary and diagnostics. Unreadable sources are omitted with notes; no directory scanning, credentials, full settings, raw logs or automatic upload. Existing destinations are never replaced. This is not a settings backup.
+
 - [x] Offline Native Guide, expanded About credits/inspiration, support/community/license resources, and validated Player Contents folder shortcuts.
 
 - [x] Audit original Appearance, Misc, and Info source and nested controls — see [SOURCE-PARITY.md](SOURCE-PARITY.md) for the resulting backlog.
@@ -86,6 +89,8 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 - [x] Appearance-only reset already exists under More → Appearance.
 
 ## Acceptance checks
+
+- [x] Isolated support UI: exact README/event previews, cancel, optional event omission, local ZIP save and separate Launcher Logs opening in Finder. Inspected the resulting ZIP (events omitted as chosen, three fixed files, private permissions). 11 new automated tests cover bounded rotation/restart, safe fields, corrupt/oversized/linked journals, unrelated-file preservation, immutable snapshots, exact archive bytes and failure/collision cleanup. No Player, Discord, account or display changes.
 
 - [x] Isolated resources UI: compact About links/layout, offline guide from About and Diagnostics, full credits/inspiration/legacy-stack scrolling, selected Player Contents opening in Finder, and the Installation shortcut layout. Fixture tests validate normal/aliased app paths and reject stale bundles or redirected Contents. No Player was started or resources applied.
 

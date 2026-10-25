@@ -85,7 +85,7 @@ extension LauncherModel {
         if configuration.features.applyModsOnLaunch && !isRunning && (configuration.features.mods.contains { $0.enabled } || hasModBackup) {
             try await modStore.apply(configuration.features.mods, to: installation)
             await refreshModBackup()
-            record("Applied enabled content mods before launch.")
+            record("Applied enabled content mods before launch.", event: .modsApplied)
         }
     }
 
@@ -104,7 +104,7 @@ extension LauncherModel {
             try persist(next)
             modLibraryScan = nil
             featureStatus = "Imported \(mod.name) (\(mod.fileCount) \(mod.fileCount == 1 ? "file" : "files"))."
-            record(featureStatus)
+            record(featureStatus, event: .modsImported)
         } catch { report(error) }
     }
 
@@ -213,7 +213,7 @@ extension LauncherModel {
                 try await modStore.restore(installation)
             } else { try await modStore.apply(configuration.features.mods, to: installation) }
             featureStatus = restore ? "Original Roblox resources restored." : "Enabled mods applied. Ready for the next launch."
-            record(featureStatus)
+            record(featureStatus, event: restore ? .modsRestored : .modsApplied)
         } catch { featureStatus = "No changes applied."; report(error) }
         await refreshModBackup()
     }
@@ -295,7 +295,7 @@ extension LauncherModel {
             try persist(next)
             try didInstallPlayer(at: target)
             updateStatus = "Installed Roblox \(release.version). Profiles and mods remain in your library."
-            record(updateStatus)
+            record(updateStatus, event: .playerUpdated)
         } catch is CancellationError { updateStatus = "Update cancelled. The download workspace was removed." }
         catch { updateStatus = "Update stopped: \(error.localizedDescription)"; report(error) }
     }
@@ -321,7 +321,7 @@ extension LauncherModel {
         next.features.accounts.append(account)
         // Adding an account does not change Player's login until the user selects and launches it.
         try persist(next)
-        record("Saved account @\(account.name) in Keychain.")
+        record("Saved account @\(account.name) in Keychain.", event: .accountSaved)
     }
 
     func selectAccount(_ id: Int64?) {
@@ -384,7 +384,7 @@ extension LauncherModel {
         do {
             try persist(plan.applying(to: configuration))
             legacyImportReview = nil
-            record("Imported \(plan.conversions.count) original profiles; \(plan.warnings.count) disabled-row warnings.")
+            record("Imported \(plan.conversions.count) original profiles; \(plan.warnings.count) disabled-row warnings.", event: .profilesImported, count: plan.conversions.count)
         } catch { report(error) }
     }
 
@@ -530,7 +530,7 @@ extension LauncherModel {
                                 saveHistorySnapshot()
                             }
                             refreshCurrentGameDetailsIfNeeded()
-                            record("Joined \(currentSession?.name ?? fallback).")
+                            record("Joined \(currentSession?.name ?? fallback).", event: .sessionJoined)
                         case .serverConnected(let endpoint):
                             guard let session = currentSession,
                                   serverConnection.connect(sessionID: session.id, endpoint: endpoint) else { continue }
