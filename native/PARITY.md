@@ -39,7 +39,15 @@ More → Integrations offers independent current-game, play-time, artwork/creato
 
 Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. Each pack’s ••• menu offers Show Files and Remove from Library. Rescanning checks all registered imported copies, including disabled ones, updates valid file counts without changing identity/selection, and reports invalid/missing packs and resource overlaps. Conflict findings follow enabled selection; known invalid enabled packs block Apply until fixed/rescanned or disabled. Backups, unregistered folders, and removed records are not discovered. Scan only updates library metadata; applying remains explicit or opt-in before launch.
 
+## Native maintenance (outside the screenshot audit)
+
+- [x] Copy a fixed-field diagnostics report without account data, names, paths, URLs, raw logs, or activity messages.
+- [x] Clear only the saved game-details cache, including memory/disk entries and obsolete in-flight lookups.
+- [x] Appearance-only reset already exists under More → Appearance.
+
 ## Acceptance checks
+
+- [x] Isolated cache-maintenance UI: Cancel preserves entries, confirmed clear empties the cache, and unrelated files remain byte-for-byte unchanged. Diagnostics menu/report formatter verified; system clipboard contents were not changed during QA.
 
 - [x] Isolated Mods UI: refreshed counts, invalid-pack findings, enabled conflict blocking, disabled conflict resolution, repaired-pack rescanning, Show Files in Finder, and local guide/link layout.
 

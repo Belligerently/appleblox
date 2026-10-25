@@ -52,6 +52,7 @@ public actor GameCatalog {
     private let fetch: Fetch
     private let file: URL?
     private var cache: [String: GameDetails] = [:]
+    private var cacheGeneration = 0
 
     public init(directory: URL? = nil, fetch: @escaping Fetch = GameCatalog.fetchPublicData) {
         self.fetch = fetch
@@ -63,9 +64,39 @@ public actor GameCatalog {
     }
 
     public func cachedGame(for placeID: String) -> GameDetails? { cache[placeID] }
+    public var cachedGameCount: Int { cache.count }
+
+    @discardableResult
+    public func clearCache() throws -> Int {
+        if let file {
+            let fm = FileManager.default
+            let attributes: [FileAttributeKey: Any]?
+            do { attributes = try fm.attributesOfItem(atPath: file.path) }
+            catch {
+                let error = error as NSError
+                guard error.domain == NSCocoaErrorDomain,
+                      [CocoaError.fileNoSuchFile.rawValue, CocoaError.fileReadNoSuchFile.rawValue].contains(error.code) else { throw error }
+                attributes = nil
+            }
+            if let attributes {
+                guard attributes[.type] as? FileAttributeType == .typeRegular,
+                      try fm.attributesOfItem(atPath: file.deletingLastPathComponent().path)[.type] as? FileAttributeType == .typeDirectory else {
+                    throw FeatureError.message("The game-details cache path is not a regular file in the app data folder.")
+                }
+                // Commit disk first: a failed write must retain the in-memory cache too.
+                try Data("[]".utf8).write(to: file, options: .atomic)
+            }
+        }
+        let count = cache.count
+        cacheGeneration += 1
+        cache.removeAll()
+        return count
+    }
+
 
     public func game(for input: String, refresh: Bool = false) async throws -> GameDetails {
         let placeID = try RobloxPlaceInput.placeID(from: input)
+        let generation = cacheGeneration
         if !refresh, let cached = cache[placeID], !cached.isStale { return cached }
         do {
             struct Universe: Decodable { let universeId: UInt64 }
@@ -80,15 +111,18 @@ public actor GameCatalog {
                 let data: [Game]
             }
             let universeData = try await fetch(URL(string: "https://apis.roblox.com/universes/v1/places/\(placeID)/universe")!)
+            guard generation == cacheGeneration else { throw CancellationError() }
             let universe = try JSONDecoder().decode(Universe.self, from: universeData)
             guard universe.universeId > 0 else { throw FeatureError.message("This place is unavailable.") }
             let gameData = try await fetch(URL(string: "https://games.roblox.com/v1/games?universeIds=\(universe.universeId)")!)
+            guard generation == cacheGeneration else { throw CancellationError() }
             let games = try JSONDecoder().decode(Games.self, from: gameData)
             guard let game = games.data.first(where: { $0.id == universe.universeId }), !game.name.isEmpty else {
                 throw FeatureError.message("This experience is private, deleted, or unavailable.")
             }
             let icon = try await icon(for: universe.universeId)
             try Task.checkCancellation()
+            guard generation == cacheGeneration else { throw CancellationError() }
             let result = GameDetails(placeID: placeID, universeID: universe.universeId, name: String(game.name.prefix(300)),
                                      creator: String(game.creator.name.prefix(300)), playing: game.playing.flatMap { $0 >= 0 ? $0 : nil },
                                      iconURL: icon, fetchedAt: Date())
@@ -102,6 +136,7 @@ public actor GameCatalog {
             return result
         } catch {
             try Task.checkCancellation()
+            guard generation == cacheGeneration else { throw CancellationError() }
             if let cached = cache[placeID] { return cached }
             throw error
         }

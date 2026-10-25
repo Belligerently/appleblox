@@ -49,6 +49,7 @@ final class LauncherModel {
     var canSaveHistory = true
     var historyRevision = 0
     var discordStatus = "Off"
+    var maintenanceStatus = ""
     var isQuittingAfterPlayer = false
     var pendingLink: LaunchLink?
     var isBusy: Bool { isLaunching || isApplyingEngine || isWorkingFeature }

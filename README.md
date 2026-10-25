@@ -28,7 +28,7 @@ The app targets **macOS 14 or later**. Liquid Glass is used on macOS 26 and late
 
 | Feature | Included |
 | --- | --- |
-| Launcher | Roblox Player detection, saved games with artwork and search, per-game profiles, and diagnostics |
+| Launcher | Roblox Player detection, saved games with artwork and search, per-game profiles, fixed-field diagnostics reports, and game-details cache cleanup |
 | Interface | Compact navigation, Liquid Glass controls, System/Light/Dark themes, solid backgrounds, and reduced-motion support |
 | Engine settings | Flag presets, visual flag editing with search and bulk removal, validated JSON import/export, and backup/restore |
 | Content mods | Local packs with rescan/conflict reports, a mod guide, custom fonts, Roblox UI icon colors, and resource restore |

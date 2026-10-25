@@ -371,12 +371,21 @@ struct InstallationView: View {
 
 struct DiagnosticsView: View {
     let model: LauncherModel
+    @State private var confirmClearCache = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 PageHeading(title: "Diagnostics", subtitle: model.isRunning ? "Roblox is running" : "Roblox is not running")
                 Button("Open Logs", systemImage: "folder", action: model.openRobloxLogs).controlSize(.small)
+                Menu {
+                    Button("Copy Diagnostics", systemImage: "doc.on.doc") { Task { await model.copyDiagnostics() } }
+                    Button("Clear Game Details Cache…", systemImage: "arrow.clockwise") { confirmClearCache = true }
+                        .disabled(model.isBusy)
+                    Divider()
+                    Button("Open Native Data Folder", systemImage: "folder", action: model.showNativeData)
+                } label: { Image(systemName: "ellipsis.circle") }
+                .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Diagnostics actions")
             }
             List(model.activity) { entry in
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -386,7 +395,13 @@ struct DiagnosticsView: View {
                 .padding(.vertical, 3)
             }
             .listStyle(.plain).scrollContentBackground(.hidden)
-            Text("Session activity · Running status updates automatically").font(.caption2).foregroundStyle(.tertiary)
+            Text(model.maintenanceStatus.isEmpty ? "Session activity · Running status updates automatically" : model.maintenanceStatus)
+                .font(.caption).foregroundStyle(.secondary).lineLimit(3)
+        }
+        .confirmationDialog("Clear saved game details?", isPresented: $confirmClearCache, titleVisibility: .visible) {
+            Button("Clear Game Details Cache") { Task { await model.clearGameDetailsCache() } }
+        } message: {
+            Text("Clears cached game names, creators, and thumbnail links. Saved games, accounts, profiles, mods, backups, and Roblox files stay intact. New lookups can refill the cache; downloaded images in the macOS image cache are unaffected.")
         }
     }
 }
