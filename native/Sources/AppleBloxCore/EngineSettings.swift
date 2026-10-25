@@ -97,8 +97,25 @@ public struct EngineProfile: Codable, Equatable, Identifiable, Sendable {
     public var fullResolution = false
     public var graySky = false
     public var customFlags: [String: FlagValue] = [:]
+    public var disabledCustomFlags: [String: FlagValue] = [:]
 
     public init(id: UUID = UUID(), name: String) { self.id = id; self.name = name }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, renderer, graphicsQuality, textureQuality, fullResolution, graySky, customFlags, disabledCustomFlags
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(id: try values.decode(UUID.self, forKey: .id), name: try values.decode(String.self, forKey: .name))
+        renderer = try values.decodeIfPresent(GraphicsRenderer.self, forKey: .renderer) ?? .automatic
+        graphicsQuality = try values.decodeIfPresent(Int.self, forKey: .graphicsQuality)
+        textureQuality = try values.decodeIfPresent(Int.self, forKey: .textureQuality)
+        fullResolution = try values.decodeIfPresent(Bool.self, forKey: .fullResolution) ?? false
+        graySky = try values.decodeIfPresent(Bool.self, forKey: .graySky) ?? false
+        customFlags = try values.decodeIfPresent([String: FlagValue].self, forKey: .customFlags) ?? [:]
+        disabledCustomFlags = try values.decodeIfPresent([String: FlagValue].self, forKey: .disabledCustomFlags) ?? [:]
+    }
 
     public func validated() throws -> EngineProfile {
         var result = self
@@ -107,6 +124,10 @@ public struct EngineProfile: Codable, Equatable, Identifiable, Sendable {
         if let graphicsQuality, !(1...21).contains(graphicsQuality) { throw EngineError.invalidValue("Graphics quality (1–21)") }
         if let textureQuality, !(0...3).contains(textureQuality) { throw EngineError.invalidValue("Texture quality (0–3)") }
         result.customFlags = try FastFlags.validate(customFlags)
+        result.disabledCustomFlags = try FastFlags.validate(disabledCustomFlags)
+        guard Set(customFlags.keys).isDisjoint(with: disabledCustomFlags.keys) else {
+            throw EngineError.invalidValue("Duplicate enabled and disabled flag")
+        }
         return result
     }
 

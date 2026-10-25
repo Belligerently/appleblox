@@ -55,7 +55,7 @@ struct EngineView: View {
                             GridRow {
                                 EngineSummaryField(title: "Full resolution", value: profile.fullResolution ? "On" : "Default")
                                 EngineSummaryField(title: "Gray sky", value: profile.graySky ? "On" : "Default")
-                                EngineSummaryField(title: "Custom flags", value: "\(profile.customFlags.count)")
+                                EngineSummaryField(title: "Custom flags", value: "\(profile.customFlags.count) on · \(profile.disabledCustomFlags.count) off")
                             }
                         }
                         .padding(10).frame(maxWidth: .infinity, alignment: .leading)
@@ -124,73 +124,5 @@ private struct EngineSummaryField: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-    }
-}
-
-private struct EngineProfileEditor: View {
-    let model: LauncherModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var profile: EngineProfile
-    @State private var flagsJSON: String
-    @State private var message: String?
-    @State private var showAdvanced = false
-
-    init(model: LauncherModel, profile: EngineProfile) {
-        self.model = model
-        // A sheet owns an editable snapshot; Save commits it, Cancel discards it.
-        self.profile = profile
-        self.flagsJSON = (try? FastFlags.json(profile.customFlags)) ?? "{}"
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Engine Profile").font(.title2.weight(.semibold))
-            Form {
-                Section {
-                    TextField("Name", text: $profile.name)
-                    Picker("Graphics API", selection: $profile.renderer) {
-                        ForEach(GraphicsRenderer.allCases) { Text($0.title).tag($0) }
-                    }
-                    Picker("Graphics quality", selection: $profile.graphicsQuality) {
-                        Text("Roblox default").tag(Int?.none)
-                        ForEach(1...21, id: \.self) { Text("Level \($0)").tag(Optional($0)) }
-                    }
-                    Picker("Texture quality", selection: $profile.textureQuality) {
-                        Text("Roblox default").tag(Int?.none)
-                        ForEach(0...3, id: \.self) { Text("Level \($0)").tag(Optional($0)) }
-                    }
-                    Toggle("Full resolution with fractional scaling", isOn: $profile.fullResolution)
-                    Toggle("Simple gray sky", isOn: $profile.graySky)
-                }
-                Section {
-                    DisclosureGroup("Custom FastFlags JSON", isExpanded: $showAdvanced) {
-                        TextEditor(text: $flagsJSON)
-                            .font(.system(.caption, design: .monospaced))
-                            .frame(minHeight: 110)
-                            .scrollContentBackground(.hidden)
-                            .accessibilityLabel("Custom FastFlags JSON")
-                        Text("Custom values override the presets above. Accepts the original AppleBlox local-client allowlist; unsupported keys are rejected. Roblox may ignore flags depending on its version.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .formStyle(.grouped).controlSize(.small).scrollContentBackground(.hidden)
-            .contentMargins(.horizontal, 0, for: .scrollContent)
-            if let message { Text(message).font(.callout).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true) }
-            HStack {
-                Text("Saved profiles take effect when applied.").font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("Save Profile") {
-                    do {
-                        profile.customFlags = try FastFlags.parse(flagsJSON)
-                        try model.saveEngineProfile(profile)
-                        dismiss()
-                    } catch { message = error.localizedDescription }
-                }
-                .launchButtonStyle().keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding(20).frame(width: 470, height: showAdvanced ? 590 : 430)
     }
 }

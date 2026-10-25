@@ -17,16 +17,22 @@ Compared against all seven images in the [upstream README gallery](https://githu
 - [ ] Separate graphics-quality and render-distance controls
 - [ ] Visual-effects toggle
 - [ ] Review missing graphics API options — Default, Metal, and OpenGL are implemented
-- [ ] Visual FastFlag rows with value editing and enable/disable switches
-- [ ] FastFlag search
-- [ ] FastFlag selection and bulk removal
+- [x] Visual FastFlag rows with value editing and enable/disable switches
+- [x] FastFlag search
+- [x] FastFlag selection and bulk removal
 - [ ] Review original profile types and flag compatibility — named/per-game profiles, JSON editing, import/export already exist
 - [ ] Legacy Resolution mode for mods
 - [ ] Mod installation guide and community links
 - [ ] Mods-folder rescan — explicit pack imports already exist
 - [ ] Live Discord display verification
 
+## Visual FastFlag editor
+
+Engine → Edit now groups Presets, Flags, and JSON in one profile sheet. Flags support allowlist-based addition, Boolean/integer values, persistent enabled/disabled state, name/value search, visible-row selection, and bulk removal. JSON imports replace enabled custom overrides; disabled rows remain unless an imported key enables them. JSON exports omit disabled overrides. Cancel discards draft changes; Save only stores the profile, and Apply remains separate.
+
 ## Acceptance checks
+
+- [x] Isolated visual-editor checks: add/search/edit flags, invalid value/JSON recovery, filtered selection and bulk removal, saved disabled values, and Cancel preserving the profile.
 
 - [x] Both Player-close toggles migrate from older settings as off and persist independently.
 - [ ] Live Player-close verification: return-to-website alone, exit-launcher alone, both together, and multiple Player instances.
