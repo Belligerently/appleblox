@@ -1,15 +1,26 @@
 import Foundation
 
 public enum GraphicsRenderer: String, Codable, CaseIterable, Identifiable, Sendable {
-    case automatic, metal, openGL
+    case automatic, metal, openGL, vulkan
     public var id: Self { self }
     public var title: String {
         switch self {
         case .automatic: "Roblox default"
         case .metal: "Metal"
         case .openGL: "OpenGL"
+        case .vulkan: "Vulkan (experimental)"
         }
     }
+}
+
+/// CSG mesh detail thresholds, independent of streamed objects and the in-game distance slider.
+public enum ObjectDetailDistance: String, Codable, CaseIterable, Identifiable, Sendable {
+    case automatic, near, medium, far, veryFar
+    public var id: Self { self }
+    public var studs: Int? {
+        switch self { case .automatic: nil; case .near: 50; case .medium: 100; case .far: 250; case .veryFar: 1000 }
+    }
+    public var title: String { studs.map { "\($0) studs" } ?? "Roblox default" }
 }
 
 public enum FlagValue: Codable, Equatable, Sendable {
@@ -92,6 +103,9 @@ public struct EngineProfile: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public var name: String
     public var renderer: GraphicsRenderer = .automatic
+    public var separateQualityAndDistance = false
+    public var objectDetailDistance: ObjectDetailDistance = .automatic
+    public var disableVoxelShadows = false
     public var graphicsQuality: Int?
     public var textureQuality: Int?
     public var fullResolution = false
@@ -102,7 +116,7 @@ public struct EngineProfile: Codable, Equatable, Identifiable, Sendable {
     public init(id: UUID = UUID(), name: String) { self.id = id; self.name = name }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, renderer, graphicsQuality, textureQuality, fullResolution, graySky, customFlags, disabledCustomFlags
+        case id, name, renderer, separateQualityAndDistance, objectDetailDistance, disableVoxelShadows, graphicsQuality, textureQuality, fullResolution, graySky, customFlags, disabledCustomFlags
     }
 
     public init(from decoder: any Decoder) throws {
@@ -110,6 +124,10 @@ public struct EngineProfile: Codable, Equatable, Identifiable, Sendable {
         self.init(id: try values.decode(UUID.self, forKey: .id), name: try values.decode(String.self, forKey: .name))
         renderer = try values.decodeIfPresent(GraphicsRenderer.self, forKey: .renderer) ?? .automatic
         graphicsQuality = try values.decodeIfPresent(Int.self, forKey: .graphicsQuality)
+        // Existing explicit quality overrides keep their effect when older profiles migrate.
+        separateQualityAndDistance = try values.decodeIfPresent(Bool.self, forKey: .separateQualityAndDistance) ?? (graphicsQuality != nil)
+        objectDetailDistance = try values.decodeIfPresent(ObjectDetailDistance.self, forKey: .objectDetailDistance) ?? .automatic
+        disableVoxelShadows = try values.decodeIfPresent(Bool.self, forKey: .disableVoxelShadows) ?? false
         textureQuality = try values.decodeIfPresent(Int.self, forKey: .textureQuality)
         fullResolution = try values.decodeIfPresent(Bool.self, forKey: .fullResolution) ?? false
         graySky = try values.decodeIfPresent(Bool.self, forKey: .graySky) ?? false
@@ -122,6 +140,7 @@ public struct EngineProfile: Codable, Equatable, Identifiable, Sendable {
         result.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !result.name.isEmpty, result.name.count <= 80 else { throw EngineError.invalidProfileName }
         if let graphicsQuality, !(1...21).contains(graphicsQuality) { throw EngineError.invalidValue("Graphics quality (1–21)") }
+        if separateQualityAndDistance && graphicsQuality == nil { throw EngineError.invalidValue("Choose a graphics quality level") }
         if let textureQuality, !(0...3).contains(textureQuality) { throw EngineError.invalidValue("Texture quality (0–3)") }
         result.customFlags = try FastFlags.validate(customFlags)
         result.disabledCustomFlags = try FastFlags.validate(disabledCustomFlags)
@@ -137,11 +156,21 @@ public struct EngineProfile: Codable, Equatable, Identifiable, Sendable {
         switch profile.renderer {
         case .automatic: break
         case .metal: flags["FFlagDebugGraphicsPreferMetal"] = .boolean(true)
+        case .vulkan:
+            flags["FFlagDebugGraphicsDisableMetal"] = .boolean(true)
+            flags["FFlagDebugGraphicsPreferVulkan"] = .boolean(true)
         case .openGL:
             flags["FFlagDebugGraphicsDisableMetal"] = .boolean(true)
             flags["FFlagDebugGraphicsPreferOpenGL"] = .boolean(true)
         }
-        if let value = profile.graphicsQuality { flags["DFIntDebugFRMQualityLevelOverride"] = .integer(value) }
+        if let distance = profile.objectDetailDistance.studs {
+            for key in ["DFIntCSGLevelOfDetailSwitchingDistance", "DFIntCSGLevelOfDetailSwitchingDistanceL12",
+                        "DFIntCSGLevelOfDetailSwitchingDistanceL23", "DFIntCSGLevelOfDetailSwitchingDistanceL34"] {
+                flags[key] = .integer(distance)
+            }
+        }
+        if profile.disableVoxelShadows { flags["DFFlagDebugPauseVoxelizer"] = .boolean(true) }
+        if profile.separateQualityAndDistance, let value = profile.graphicsQuality { flags["DFIntDebugFRMQualityLevelOverride"] = .integer(value) }
         if let value = profile.textureQuality {
             flags["DFFlagTextureQualityOverrideEnabled"] = .boolean(true)
             flags["DFIntTextureQualityOverride"] = .integer(value)

@@ -15,6 +15,7 @@ import Testing
 @Test func presetsResolveAndCustomValuesOverrideThem() throws {
     var profile = EngineProfile(name: "  My graphics  ")
     profile.renderer = .openGL
+    profile.separateQualityAndDistance = true
     profile.graphicsQuality = 12
     profile.textureQuality = 2
     profile.fullResolution = true

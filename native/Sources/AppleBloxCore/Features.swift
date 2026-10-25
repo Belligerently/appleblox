@@ -20,6 +20,7 @@ public struct RobloxAccount: Codable, Equatable, Identifiable, Sendable {
 public struct FeatureSettings: Codable, Equatable, Sendable {
     public var mods: [ContentMod] = []
     public var applyModsOnLaunch = false
+    public var legacyResolution = false
     public var accounts: [RobloxAccount] = []
     public var selectedAccountID: Int64?
     public var bloxstrapSDK = false
@@ -40,7 +41,7 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case bloxstrapSDK, gameControlledPresence, mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordPlayTime, discordGameActivity, discordArtwork, discordGameButton, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
+        case bloxstrapSDK, gameControlledPresence, legacyResolution, mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordPlayTime, discordGameActivity, discordArtwork, discordGameButton, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
     }
 
     public init(from decoder: any Decoder) throws {
@@ -48,6 +49,7 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         bloxstrapSDK = try values.decodeIfPresent(Bool.self, forKey: .bloxstrapSDK) ?? false
         gameControlledPresence = try values.decodeIfPresent(Bool.self, forKey: .gameControlledPresence) ?? false
+        legacyResolution = try values.decodeIfPresent(Bool.self, forKey: .legacyResolution) ?? false
         mods = try values.decodeIfPresent([ContentMod].self, forKey: .mods) ?? mods
         applyModsOnLaunch = try values.decodeIfPresent(Bool.self, forKey: .applyModsOnLaunch) ?? applyModsOnLaunch
         accounts = try values.decodeIfPresent([RobloxAccount].self, forKey: .accounts) ?? accounts

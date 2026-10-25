@@ -179,6 +179,9 @@ final class LauncherModel {
         do {
             guard let installation else { throw InstallationError.missingInstallation }
             let verified = try RobloxInstallation.inspect(installation.url)
+            let requestedURL = try link?.url ?? shortcut?.validated().launchURL
+            let plan = try PlayerLaunchPlan(url: requestedURL, legacyResolution: configuration.features.legacyResolution,
+                                            newInstance: configuration.features.newPlayerInstance, playerRunning: isRunning)
             let linkedProfile = shortcut?.engineProfileID.flatMap { id in configuration.engine.profiles.first { $0.id == id } }
             if (configuration.engine.applyOnLaunch || linkedProfile != nil) && !isRunning {
                 guard let profile = linkedProfile ?? configuration.engine.selectedProfile else { throw EngineError.invalidProfiles }
@@ -192,12 +195,10 @@ final class LauncherModel {
             try await prepareFeatureLaunch(verified)
             let options = NSWorkspace.OpenConfiguration()
             options.activates = true
-            options.createsNewApplicationInstance = configuration.features.newPlayerInstance
-            if let link {
-                _ = try await NSWorkspace.shared.open([link.url], withApplicationAt: verified.url, configuration: options)
-            } else if let shortcut {
-                let validShortcut = try shortcut.validated()
-                _ = try await NSWorkspace.shared.open([validShortcut.launchURL], withApplicationAt: verified.url, configuration: options)
+            options.createsNewApplicationInstance = plan.createsNewInstance
+            options.arguments = plan.arguments
+            if let url = plan.urlToOpen {
+                _ = try await NSWorkspace.shared.open([url], withApplicationAt: verified.url, configuration: options)
             } else {
                 _ = try await NSWorkspace.shared.openApplication(at: verified.url, configuration: options)
             }

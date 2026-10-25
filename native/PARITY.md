@@ -14,18 +14,26 @@ Compared against all seven images in the [upstream README gallery](https://githu
 - [ ] Improve and verify multiple-instance support — standard macOS new-instance request exists
 - [ ] FPS unlock control
 - [ ] Lighting-technology selection
-- [ ] Voxel-shadow toggle
-- [ ] Separate graphics-quality and render-distance controls
+- [x] Voxel-shadow toggle — opt-in voxelizer pause; not a promise to disable every shadow type
+- [x] Separate graphics-quality and render-distance controls — independent base-quality override and CSG object-detail distances; streamed object loading remains game-controlled
 - [ ] Visual-effects toggle
-- [ ] Review missing graphics API options — Default, Metal, and OpenGL are implemented
+- [x] Review missing graphics API options — restored the original Vulkan request as experimental alongside Default, Metal, and OpenGL; runtime backend support remains unverified
 - [x] Visual FastFlag rows with value editing and enable/disable switches
 - [x] FastFlag search
 - [x] FastFlag selection and bulk removal
 - [ ] Review original profile types and flag compatibility — named/per-game profiles, JSON editing, import/export already exist
-- [ ] Legacy Resolution mode for mods
+- [x] Legacy Resolution mode for mods — opt-in fresh-launch arguments, defaults off; voice chat may be unavailable
 - [x] Mod installation guide and community links — native folder instructions, fork support, upstream community, GameBanana, and Bloxstrap resource guide
 - [x] Mods-folder rescan — validates registered imported copies, refreshes counts, and reports enabled conflicts; new packs still use Import
 - [ ] Live Discord display verification
+
+## Graphics and Legacy Resolution cluster
+
+Engine → Edit → Presets adds an explicit Separate graphics quality and distance switch with remembered base-quality level (1–21), independent CSG object-detail distances (default, 50, 100, 250, 1000 studs), and Disable voxel shadows. Existing profiles with a saved quality override migrate with separation enabled; new profiles leave all new overrides off/default. Disabling separation retains its saved level but emits no quality flag. Distance presets write the four allowlisted CSG detail-switching flags; they do not change experience streaming. Shadow control writes `DFFlagDebugPauseVoxelizer` and depends on the game’s lighting. Enabled custom rows retain precedence, and disabled custom rows do not suppress presets.
+
+The Graphics API picker restores the inherited Vulkan flag pair (`FFlagDebugGraphicsPreferVulkan`, `FFlagDebugGraphicsDisableMetal`) as **experimental**. These options are client flag requests, not installed rendering backends. Mac Player may ignore/fall back from any request. No unsupported lighting/FPS/effect flags were added. The inherited allowlist is unchanged; Roblox can change which flags it honors. References: inherited `legacy/frontend/src/windows/main/ts/roblox/fflags.ts` and [Roblox’s allowlist announcement](https://devforum.roblox.com/t/allowlist-for-local-client-configuration-via-fast-flags/3966569).
+
+Mods adds Legacy Resolution for older mods, default off for new/migrated settings. A fresh launch sends `-AppleMagnifiedMode YES` through Launch Services arguments, with any reviewed game/browser launch URL preserved as a single argument. Normal launches retain URL handling. It does not edit Info.plist or resources. Reusing a running Player is blocked before applying profiles/mods; the user can quit Player or explicitly request a new instance. Voice chat and low-resolution rendering still need live acceptance testing.
 
 ## Visual FastFlag editor
 
@@ -52,6 +60,10 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 - [x] Appearance-only reset already exists under More → Appearance.
 
 ## Acceptance checks
+
+- [x] Isolated graphics/Mods UI: default states, experimental renderer explanation, independent quality/distance selection, remembered disabled quality value, voxel control, Save/Cancel behavior, summary fields, Legacy Resolution help/layout, and persistence of all four feature settings after restart.
+- [x] Graphics/launch unit checks: migration, independent quality/distance settings, custom override precedence, renderer mappings, strict saved-value validation, URL/argument preservation, fresh-launch guard, settings round-trip, and exact fixture backup restoration.
+- [ ] Live graphics acceptance: verify actual Vulkan backend/fallback, CSG distance and voxelizer effects, Legacy Resolution rendering, game-link joining, and voice chat on supported Macs.
 
 - [x] Isolated SDK settings UI: new controls default off, SDK/game-visibility dependencies disable game control, saved values survive restart, and the section fits the compact window. Live SDK messages inside a Roblox experience and Discord display still need acceptance testing.
 

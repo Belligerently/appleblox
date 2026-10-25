@@ -73,16 +73,41 @@ struct EngineProfileEditor: View {
                 Picker("Graphics API", selection: $profile.renderer) {
                     ForEach(GraphicsRenderer.allCases) { Text($0.title).tag($0) }
                 }
-                Picker("Graphics quality", selection: $profile.graphicsQuality) {
-                    Text("Roblox default").tag(Int?.none)
-                    ForEach(1...21, id: \.self) { Text("Level \($0)").tag(Optional($0)) }
+                if profile.renderer == .vulkan {
+                    Text("Requests the original AppleBlox Vulkan flags. Support depends on Roblox’s macOS Player; it may ignore them or fall back to another renderer.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
+            }
+            Section("Quality & distance") {
+                Toggle("Separate graphics quality and distance", isOn: Binding(
+                    get: { profile.separateQualityAndDistance },
+                    set: { enabled in
+                        if enabled, profile.graphicsQuality == nil { profile.graphicsQuality = 5 }
+                        profile.separateQualityAndDistance = enabled
+                    }
+                ))
+                Picker("Base graphics quality", selection: Binding(
+                    get: { profile.graphicsQuality ?? 5 }, set: { profile.graphicsQuality = $0 }
+                )) {
+                    ForEach(1...21, id: \.self) { Text("Level \($0)").tag($0) }
+                }
+                .disabled(!profile.separateQualityAndDistance)
+                Picker("Object detail distance", selection: $profile.objectDetailDistance) {
+                    ForEach(ObjectDetailDistance.allCases) { Text($0.title).tag($0) }
+                }
+                Text("Base quality is independent of Roblox’s in-game distance slider. Object detail distance controls CSG mesh detail; it does not load streamed objects farther away. Low quality can hide objects in some games.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Visuals") {
                 Picker("Texture quality", selection: $profile.textureQuality) {
                     Text("Roblox default").tag(Int?.none)
                     ForEach(0...3, id: \.self) { Text("Level \($0)").tag(Optional($0)) }
                 }
                 Toggle("Full resolution with fractional scaling", isOn: $profile.fullResolution)
                 Toggle("Simple gray sky", isOn: $profile.graySky)
+                Toggle("Disable voxel shadows", isOn: $profile.disableVoxelShadows)
+                Text("Pauses Roblox’s voxelizer. Effects depend on the experience’s lighting; this does not disable every kind of shadow.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section {
                 Text("Enabled custom flags override these presets. Disabling a custom row lets the corresponding preset take effect again. Roblox may ignore flags depending on its version.")

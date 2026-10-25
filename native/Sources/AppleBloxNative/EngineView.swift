@@ -49,13 +49,17 @@ struct EngineView: View {
                         Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                             GridRow {
                                 EngineSummaryField(title: "Renderer", value: profile.renderer.title)
-                                EngineSummaryField(title: "Quality", value: profile.graphicsQuality.map(String.init) ?? "Default")
+                                EngineSummaryField(title: "Quality", value: profile.separateQualityAndDistance ? (profile.graphicsQuality.map(String.init) ?? "Default") : "Default")
                                 EngineSummaryField(title: "Textures", value: profile.textureQuality.map { "Level \($0)" } ?? "Default")
                             }
                             GridRow {
                                 EngineSummaryField(title: "Full resolution", value: profile.fullResolution ? "On" : "Default")
                                 EngineSummaryField(title: "Gray sky", value: profile.graySky ? "On" : "Default")
                                 EngineSummaryField(title: "Custom flags", value: "\(profile.customFlags.count) on · \(profile.disabledCustomFlags.count) off")
+                            }
+                            GridRow {
+                                EngineSummaryField(title: "Object detail distance", value: profile.objectDetailDistance.title)
+                                EngineSummaryField(title: "Voxel shadows", value: profile.disableVoxelShadows ? "Disabled" : "Default")
                             }
                         }
                         .padding(10).frame(maxWidth: .infinity, alignment: .leading)

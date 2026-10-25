@@ -57,6 +57,12 @@ struct ModsView: View {
                 }
                 .listStyle(.plain).scrollContentBackground(.hidden)
             }
+            Toggle("Legacy Resolution for older mods", isOn: Binding(get: { model.configuration.features.legacyResolution }, set: { model.setFeature(\.legacyResolution, $0) }))
+                .controlSize(.small).disabled(model.isBusy || !model.canSave)
+            if model.configuration.features.legacyResolution {
+                Text("Uses low-resolution launch arguments for a fresh Player. Voice chat may not work. Quit Roblox before launching with this mode.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
             Toggle("Apply enabled mods to new Roblox sessions", isOn: Binding(get: { model.configuration.features.applyModsOnLaunch }, set: { model.setFeature(\.applyModsOnLaunch, $0) }))
                 .controlSize(.small).disabled(model.isBusy || !model.canSave)
             HStack {
