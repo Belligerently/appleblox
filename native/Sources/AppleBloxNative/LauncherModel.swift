@@ -46,6 +46,17 @@ final class LauncherModel {
     var presenceArtworkTask: Task<Void, Never>?
     var presenceArtworkLookupID: UUID?
     var nextPresenceArtworkAttempt = Date.distantPast
+    let serverLocations = ServerLocationService()
+    let gameNotifications = GameNotifications()
+    var serverConnection = ServerConnectionTracker()
+    var serverActivityTask: Task<Void, Never>?
+    var serverActivityRequestID: UUID?
+    var serverNoticePending = false
+    var serverNoticeLimiter = ServerNoticeLimiter()
+    var serverRegion: ServerRegion?
+    var serverLocationStatus = "Waiting for a new game server connection."
+    var notificationStatus = "Permission has not been requested"
+    var isRequestingNotifications = false
     var currentSession: PlaySession?
     var currentGameDetails: GameDetails?
     var gameDetailsTask: Task<Void, Never>?
@@ -57,6 +68,7 @@ final class LauncherModel {
     var discordStatus = "Off"
     var maintenanceStatus = ""
     var isQuittingAfterPlayer = false
+    var legacyImportReview: LegacyProfileImportPlan?
     var pendingLink: LaunchLink?
     var isBusy: Bool { isLaunching || isApplyingEngine || isWorkingFeature }
 
@@ -182,10 +194,11 @@ final class LauncherModel {
             let requestedURL = try link?.url ?? shortcut?.validated().launchURL
             let plan = try PlayerLaunchPlan(url: requestedURL, legacyResolution: configuration.features.legacyResolution,
                                             newInstance: configuration.features.newPlayerInstance, playerRunning: isRunning)
-            let linkedProfile = shortcut?.engineProfileID.flatMap { id in configuration.engine.profiles.first { $0.id == id } }
+            let mappedGame = shortcut ?? link?.placeID.flatMap { id in configuration.shortcuts.first { $0.placeID == id } }
+            let linkedProfile = mappedGame?.engineProfileID.flatMap { id in configuration.engine.profiles.first { $0.id == id } }
             if (configuration.engine.applyOnLaunch || linkedProfile != nil) && !isRunning {
                 guard let profile = linkedProfile ?? configuration.engine.selectedProfile else { throw EngineError.invalidProfiles }
-                try await clientSettings.apply(profile.resolvedFlags(), to: verified)
+                try await clientSettings.apply(configuration.engine.resolvedFlags(for: profile.id), to: verified)
                 await refreshEngineBackup()
                 engineStatus = "Applied \(profile.name) before launch."
                 record(engineStatus)

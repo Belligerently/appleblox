@@ -69,6 +69,11 @@ struct EngineProfileEditor: View {
 
     private var presets: some View {
         Form {
+            Section("Game assignments") {
+                Toggle("Include selected profile’s flags for assigned games", isOn: $profile.includesSelectedProfile)
+                Text("When assigned to a game, this profile overlays the selected profile. Selecting it as the main profile uses its own flags only.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Graphics") {
                 Picker("Graphics API", selection: $profile.renderer) {
                     ForEach(GraphicsRenderer.allCases) { Text($0.title).tag($0) }

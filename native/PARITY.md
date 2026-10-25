@@ -2,7 +2,7 @@
 
 Compared against all seven images in the [upstream README gallery](https://github.com/AppleBlox/appleblox#gallery). Checked items mean implemented; runtime acceptance work is tracked separately below.
 
-- [ ] Server-location lookup and “Server Joined” notifications
+- [x] Server-location lookup and “Server Joined” notifications — independent opt-in settings; public IPv4 only, native macOS alerts, optional sounds, fallback and duplicate/rate suppression
 - [x] Bloxstrap SDK compatibility — the original app’s SetRichPresence integration; SetLaunchData/server invites remain unsupported
 - [x] Game-controlled Discord presence — opt-in text, timers, large/small asset artwork, persistent patches and clear/reset behavior
 - [x] Independent Discord play-time toggle — defaults on, preserves existing behavior
@@ -21,11 +21,21 @@ Compared against all seven images in the [upstream README gallery](https://githu
 - [x] Visual FastFlag rows with value editing and enable/disable switches
 - [x] FastFlag search
 - [x] FastFlag selection and bulk removal
-- [ ] Review original profile types and flag compatibility — named/per-game profiles, JSON editing, import/export already exist
+- [x] Review original profile types and flag compatibility — global/game distinction, reviewed transactional imports, disabled-row preservation/warnings, and selected-profile overlays for assigned-game launches
 - [x] Legacy Resolution mode for mods — opt-in fresh-launch arguments, defaults off; voice chat may be unavailable
 - [x] Mod installation guide and community links — native folder instructions, fork support, upstream community, GameBanana, and Bloxstrap resource guide
 - [x] Mods-folder rescan — validates registered imported copies, refreshes counts, and reports enabled conflicts; new packs still use Import
 - [ ] Live Discord display verification
+
+## Server activity and original-profile import cluster
+
+More → Integrations → Game activity adds independent server-location lookup and Server Joined alerts, plus notification sounds. All three migrate/default off. Location lookup sends only the confirmed server’s validated public IPv4 address to `https://ipinfo.io/{address}/json`, through a cookie-free session. It does not request device location, use the provider’s self-IP endpoint, persist raw server addresses, or publish them to Discord/history/diagnostics. The provider receives the normal network connection as well. Private/reserved, malformed, IPv6, and Output-spoofed endpoints are ignored. Location is approximate and service limits/offline errors fall back to a generic connection notice. Requests run outside the log/Discord loop, cache up to 100 addresses in memory, and have a ten-second request cooldown. New connections reset lookup state; obsolete/cancelled results cannot replace a newer session’s display. Status is shown in Integrations.
+
+Notifications request macOS alert/sound permission only when explicitly enabled. Permission denial leaves a newly enabled preference off; macOS Focus, banner and sound settings still govern delivery. Confirmed duplicate connections are ignored, alerts have a ten-second global limit, and leaving/Player exit or disabling alerts cancels pending work. Generic alerts work without location lookup. Foreground banners are supported. Sound uses the system default only when its separate switch is on. Provider contract reference: [IPinfo’s lookup guidance](https://community.ipinfo.io/t/how-to-determine-the-district-for-a-current-ip-address-and-put-it-on-a-map/5669); notification authorization follows [Apple’s API](https://developer.apple.com/documentation/usernotifications/asking-permission-to-use-notifications).
+
+Original profile imports now distinguish `default` and `game`, inferring missing older type fields from assignments. A review lists profile types, enabled/disabled counts, place IDs, changed assignments, and skipped-row warnings before committing. Supported disabled values are preserved. Unsupported/empty/invalid disabled rows are skipped with warnings; unsupported or invalid enabled rows, duplicate flags/games, unknown types, empty game assignments, or ambiguous same-game batch mappings reject the batch. Global-profile game lists are ignored with a warning. Cancel and failed/stale reviews preserve current settings and source files. Import is bounded to 50 files, 1 MiB each/8 MiB total. Existing saved-game IDs/titles survive reassignment; new globals are not auto-selected.
+
+Imported game profiles include the currently selected profile’s resolved flags, then overlay their enabled flags, matching the original global/game precedence without generating unsupported `_PlaceFilter` flags. The option is also editable in Engine → Edit; choosing the game profile as the main profile uses its own flags without recursion. Game shortcuts and reviewed browser links with a known place ID use the same mapping. Opaque launch URLs without a readable place ID cannot preselect a game profile. Applying still requires a fresh Player and uses the existing backup/restore service. The original allowlist is unchanged; unsupported lighting/FPS/effects remain unimplemented rather than writing ineffective flags.
 
 ## Graphics and Legacy Resolution cluster
 
@@ -55,11 +65,18 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 
 ## Native maintenance (outside the screenshot audit)
 
+- [x] Optional notification sound control from the original Misc page; alternative AppleScript notifications remain unported.
+
 - [x] Copy a fixed-field diagnostics report without account data, names, paths, URLs, raw logs, or activity messages.
 - [x] Clear only the saved game-details cache, including memory/disk entries and obsolete in-flight lookups.
 - [x] Appearance-only reset already exists under More → Appearance.
 
 ## Acceptance checks
+
+- [x] Isolated server/import UI: off-by-default controls and provider disclosure, permission-not-requested status, disabled sound control, readable global/game import review and warning, Cancel preserving exact settings bytes, imported disabled rows, existing game identity/title preservation, unchanged selected profile/automatic apply, and persisted imported games/lookup preference after restart. Native notification permission was not requested. A recent existing Player log’s server-entry shape matched the parser without sending its IP anywhere.
+
+- [x] Server/profile unit checks: public IPv4/parser bounds, output spoofing, initial-log baselines and partial lines, provider response/IP validation, cached/cancelled/rate-limited lookup behavior, connection deduplication, generic notice/sound formatting, off-by-default migration, profile type/row compatibility, global/game flag precedence, transactional review, stale/conflicting batch rejection, and size bounds.
+- [ ] Live server/notification acceptance: actual Player network-log format, provider availability/accuracy, macOS permission grant/denial, foreground/background banners, sounds/Focus, and rapid teleports. No permission changes or live server-IP lookups were made during automated testing.
 
 - [x] Isolated graphics/Mods UI: default states, experimental renderer explanation, independent quality/distance selection, remembered disabled quality value, voxel control, Save/Cancel behavior, summary fields, Legacy Resolution help/layout, and persistence of all four feature settings after restart.
 - [x] Graphics/launch unit checks: migration, independent quality/distance settings, custom override precedence, renderer mappings, strict saved-value validation, URL/argument preservation, fresh-launch guard, settings round-trip, and exact fixture backup restoration.

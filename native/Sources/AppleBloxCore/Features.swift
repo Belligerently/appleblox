@@ -31,6 +31,9 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public var discordArtwork = false
     public var discordGameButton = true
     public var discordClientID = "1257650541677383721"
+    public var serverLocation = false
+    public var serverJoinedNotifications = false
+    public var notificationSounds = false
     public var trackHistory = false
     public var checkUpdatesOnOpen = false
     public var automaticUpdates = false
@@ -41,7 +44,7 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case bloxstrapSDK, gameControlledPresence, legacyResolution, mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordPlayTime, discordGameActivity, discordArtwork, discordGameButton, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
+        case serverLocation, serverJoinedNotifications, notificationSounds, bloxstrapSDK, gameControlledPresence, legacyResolution, mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordPlayTime, discordGameActivity, discordArtwork, discordGameButton, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
     }
 
     public init(from decoder: any Decoder) throws {
@@ -60,6 +63,9 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
         discordArtwork = try values.decodeIfPresent(Bool.self, forKey: .discordArtwork) ?? discordArtwork
         discordGameButton = try values.decodeIfPresent(Bool.self, forKey: .discordGameButton) ?? discordGameButton
         discordClientID = try values.decodeIfPresent(String.self, forKey: .discordClientID) ?? discordClientID
+        serverLocation = try values.decodeIfPresent(Bool.self, forKey: .serverLocation) ?? false
+        serverJoinedNotifications = try values.decodeIfPresent(Bool.self, forKey: .serverJoinedNotifications) ?? false
+        notificationSounds = try values.decodeIfPresent(Bool.self, forKey: .notificationSounds) ?? false
         trackHistory = try values.decodeIfPresent(Bool.self, forKey: .trackHistory) ?? trackHistory
         checkUpdatesOnOpen = try values.decodeIfPresent(Bool.self, forKey: .checkUpdatesOnOpen) ?? checkUpdatesOnOpen
         automaticUpdates = try values.decodeIfPresent(Bool.self, forKey: .automaticUpdates) ?? automaticUpdates
@@ -69,7 +75,7 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
         returnToWebsite = try values.decodeIfPresent(Bool.self, forKey: .returnToWebsite) ?? returnToWebsite
     }
 
-    public var needsLogTracking: Bool { trackHistory || discordPresence || quitAfterGame || bloxstrapSDK }
+    public var needsLogTracking: Bool { trackHistory || discordPresence || quitAfterGame || bloxstrapSDK || serverLocation || serverJoinedNotifications }
     public var allowsGamePresence: Bool { bloxstrapSDK && gameControlledPresence && discordPresence && discordGameActivity }
 
     public var discordOptions: DiscordPresenceOptions {
@@ -116,22 +122,5 @@ public struct LaunchLink: Equatable, Sendable {
             if let rawID { placeID = try GameShortcut(name: "Linked game", placeID: rawID).placeID }
             else { placeID = nil }
         }
-    }
-}
-
-public struct LegacyEngineProfile: Decodable, Sendable {
-    private struct Row: Decodable, Sendable { let flag: String; let enabled: Bool; let value: FlagValue? }
-    public let name: String
-    public let games: [String]?
-    private let flags: [Row]
-
-    public func nativeProfile() throws -> EngineProfile {
-        var profile = EngineProfile(name: name)
-        for row in flags where row.enabled {
-            guard let value = row.value else { throw EngineError.invalidValue(row.flag) }
-            guard profile.customFlags[row.flag] == nil else { throw FeatureError.message("Duplicate flag in legacy profile: \(row.flag)") }
-            profile.customFlags[row.flag] = value
-        }
-        return try profile.validated()
     }
 }

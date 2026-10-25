@@ -34,7 +34,7 @@ The app targets **macOS 14 or later**. Liquid Glass is used on macOS 26 and late
 | Content mods | Local packs with rescan/conflict reports, a mod guide, custom fonts, Roblox UI icon colors, Legacy Resolution launch mode, and resource restore |
 | Player updates | Roblox LIVE version checks and validated downloads with previous-app retention |
 | Accounts | Private website sign-in, explicit Player-login import, and Keychain-backed sessions |
-| Integrations | Discord presence with visibility controls, optional artwork, opt-in Bloxstrap SDK game control, local play history, and opt-in launch-link handling |
+| Integrations | Discord presence with visibility controls, optional artwork, opt-in Bloxstrap SDK game control, local play history, optional server-region lookups and native alerts, and opt-in launch-link handling |
 
 This is an ongoing migration. The online mod workshop, server-region picker, a full online game browser, and some original appearance preferences remain to be ported. Authenticated account switching and live Discord display still need acceptance testing. Roblox may ignore individual engine flags or restrict multiple instances.
 
@@ -72,7 +72,7 @@ Native tags use the `native-v` prefix to keep this fork’s history separate fro
 
 ## Data and integrations
 
-Settings, imported mods, backups, and optional play history are stored locally. Saved Roblox sessions use macOS Keychain. Sign-in, game metadata, and Player updates contact Roblox services; enabling Discord presence shares the current game name and public game link with Discord. The native guide documents where data is stored and how optional features work.
+Settings, imported mods, backups, and optional play history are stored locally. Saved Roblox sessions use macOS Keychain. Sign-in, game metadata, and Player updates contact Roblox services; enabling Discord presence shares the current game name and public game link with Discord. Optional server-location lookup sends the connected server’s public IP address to ipinfo.io; it defaults off. Server alerts require macOS notification permission. The native guide documents where data is stored and how optional features work.
 
 ## Contributing
 

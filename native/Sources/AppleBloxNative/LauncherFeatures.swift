@@ -8,6 +8,12 @@ extension LauncherModel {
             var next = configuration
             next.features[keyPath: keyPath] = value
             try persist(next)
+            if keyPath == \.serverLocation { refreshServerActivity() }
+            if keyPath == \.serverJoinedNotifications, !value {
+                serverNoticePending = false
+                // Do not interrupt a location lookup merely because alerts were disabled.
+                if !next.features.serverLocation { refreshServerActivity() }
+            }
             if !next.features.needsLogTracking {
                 finishCurrentSession()
                 Task { await logReader.reset() }
@@ -355,25 +361,27 @@ extension LauncherModel {
         panel.allowsMultipleSelection = true
         guard panel.runModal() == .OK else { return }
         do {
-            var next = configuration
+            guard panel.urls.count <= 50 else { throw EngineError.fileTooLarge }
+            var files: [Data] = []
+            var totalBytes = 0
             for url in panel.urls {
-                guard (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) <= 1_048_576 else { throw EngineError.fileTooLarge }
-                let legacy = try JSONDecoder().decode(LegacyEngineProfile.self, from: Data(contentsOf: url))
-                let profile = try legacy.nativeProfile()
-                next.engine.profiles.append(profile)
-                for placeID in legacy.games ?? [] {
-                    let valid = try GameShortcut(name: profile.name, placeID: placeID)
-                    if let index = next.shortcuts.firstIndex(where: { $0.placeID == valid.placeID }) {
-                        next.shortcuts[index].engineProfileID = profile.id
-                    } else {
-                        var shortcut = valid
-                        shortcut.engineProfileID = profile.id
-                        next.shortcuts.append(shortcut)
-                    }
-                }
+                let handle = try FileHandle(forReadingFrom: url)
+                defer { try? handle.close() }
+                let data = try handle.read(upToCount: 1_048_577) ?? Data()
+                totalBytes += data.count
+                guard data.count <= 1_048_576, totalBytes <= 8_388_608 else { throw EngineError.fileTooLarge }
+                files.append(data)
             }
-            try persist(next)
-            record("Imported \(panel.urls.count) original AppleBlox profiles.")
+            legacyImportReview = try LegacyProfileImportPlan(files: files, configuration: configuration)
+        } catch { report(error) }
+    }
+
+    func commitLegacyImport(_ plan: LegacyProfileImportPlan) {
+        guard !isBusy, canSave else { return }
+        do {
+            try persist(plan.applying(to: configuration))
+            legacyImportReview = nil
+            record("Imported \(plan.conversions.count) original profiles; \(plan.warnings.count) disabled-row warnings.")
         } catch { report(error) }
     }
 
@@ -435,6 +443,7 @@ extension LauncherModel {
     }
 
     func finishCurrentSession() {
+        resetServerActivity()
         resetGamePresence()
         gameDetailsTask?.cancel(); gameDetailsTask = nil; gameDetailsLookupID = nil
         currentGameDetails = nil
@@ -510,6 +519,11 @@ extension LauncherModel {
                             }
                             refreshCurrentGameDetailsIfNeeded()
                             record("Joined \(currentSession?.name ?? fallback).")
+                        case .serverConnected(let endpoint):
+                            guard let session = currentSession,
+                                  serverConnection.connect(sessionID: session.id, endpoint: endpoint) else { continue }
+                            serverNoticePending = configuration.features.serverJoinedNotifications
+                            refreshServerActivity()
                         case .richPresence(let patch):
                             guard currentSession != nil, configuration.features.allowsGamePresence else { continue }
                             let previousIDs = gamePresence.assetIDs
@@ -541,6 +555,7 @@ extension LauncherModel {
         }
         gameDetailsTask?.cancel(); gameDetailsTask = nil; gameDetailsLookupID = nil
         resetGamePresence()
+        resetServerActivity()
         await discord.disconnect()
     }
 }

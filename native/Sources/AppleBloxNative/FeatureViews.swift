@@ -173,6 +173,22 @@ struct IntegrationsView: View {
                 Text("Uses Discord desktop’s local IPC connection. The inherited AppleBlox application ID is the default; enter your own ID for separate fork branding.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("Game activity") {
+                featureToggle("Look up server location", \.serverLocation)
+                Text("Sends the connected server’s public IPv4 address to ipinfo.io for an approximate city/region. No account data is sent; lookup is optional and off by default.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text(model.serverLocationStatus).font(.caption).foregroundStyle(.secondary)
+                Toggle("Server Joined notifications", isOn: Binding(
+                    get: { model.configuration.features.serverJoinedNotifications },
+                    set: { enabled in Task { await model.setServerNotifications(enabled) } }
+                ))
+                .disabled(model.isBusy || !model.canSave || model.isRequestingNotifications)
+                featureToggle("Notification sounds", \.notificationSounds)
+                    .disabled(!model.configuration.features.serverJoinedNotifications)
+                Text(model.notificationStatus).font(.caption).foregroundStyle(.secondary)
+                Text("macOS asks permission when you enable alerts. With lookup off or unavailable, alerts simply confirm the server connection. Focus and system notification settings still apply.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Bloxstrap SDK") {
                 featureToggle("Enable Bloxstrap SDK compatibility", \.bloxstrapSDK)
                 featureToggle("Allow games to customize Discord presence", \.gameControlledPresence)
@@ -205,13 +221,17 @@ struct IntegrationsView: View {
             Section("Migration") {
                 Button("Import Original AppleBlox Profiles…", action: model.importLegacyProfiles)
                     .disabled(model.isBusy || !model.canSave)
-                Text("Choose one or more JSON files from the original profiles folder. Game-specific profiles also create or update saved game links. Unsupported flags stop the import without changing native settings.")
+                Text("Choose one or more JSON files from the original profiles folder. Review global/game types, disabled rows, and game assignment changes before importing. Unsupported enabled flags stop the batch; unsupported or empty disabled rows are reported.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped).controlSize(.small).scrollContentBackground(.hidden)
         .contentMargins(.horizontal, 0, for: .scrollContent).contentMargins(.top, 0, for: .scrollContent)
         .onAppear { clientID = model.configuration.features.discordClientID; handlesLinks = model.isLinkHandler() }
+        .task { model.notificationStatus = await model.gameNotifications.status() }
+        .sheet(item: Binding(get: { model.legacyImportReview }, set: { model.legacyImportReview = $0 })) { plan in
+            LegacyProfileImportView(model: model, plan: plan)
+        }
     }
 
     private func featureToggle(_ title: String, _ key: WritableKeyPath<FeatureSettings, Bool>) -> some View {

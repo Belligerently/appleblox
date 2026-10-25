@@ -102,6 +102,7 @@ public enum FastFlags {
 public struct EngineProfile: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public var name: String
+    public var includesSelectedProfile = false
     public var renderer: GraphicsRenderer = .automatic
     public var separateQualityAndDistance = false
     public var objectDetailDistance: ObjectDetailDistance = .automatic
@@ -116,12 +117,13 @@ public struct EngineProfile: Codable, Equatable, Identifiable, Sendable {
     public init(id: UUID = UUID(), name: String) { self.id = id; self.name = name }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, renderer, separateQualityAndDistance, objectDetailDistance, disableVoxelShadows, graphicsQuality, textureQuality, fullResolution, graySky, customFlags, disabledCustomFlags
+        case id, name, includesSelectedProfile, renderer, separateQualityAndDistance, objectDetailDistance, disableVoxelShadows, graphicsQuality, textureQuality, fullResolution, graySky, customFlags, disabledCustomFlags
     }
 
     public init(from decoder: any Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         self.init(id: try values.decode(UUID.self, forKey: .id), name: try values.decode(String.self, forKey: .name))
+        includesSelectedProfile = try values.decodeIfPresent(Bool.self, forKey: .includesSelectedProfile) ?? false
         renderer = try values.decodeIfPresent(GraphicsRenderer.self, forKey: .renderer) ?? .automatic
         graphicsQuality = try values.decodeIfPresent(Int.self, forKey: .graphicsQuality)
         // Existing explicit quality overrides keep their effect when older profiles migrate.
@@ -195,6 +197,13 @@ public struct EngineConfiguration: Codable, Equatable, Sendable {
     }
 
     public var selectedProfile: EngineProfile? { profiles.first { $0.id == selectedProfileID } }
+
+    public func resolvedFlags(for profileID: UUID? = nil) throws -> [String: FlagValue] {
+        guard let selectedProfile, let target = profiles.first(where: { $0.id == (profileID ?? selectedProfileID) }) else { throw EngineError.invalidProfiles }
+        let own = try target.resolvedFlags()
+        guard target.includesSelectedProfile, target.id != selectedProfileID else { return own }
+        return try selectedProfile.resolvedFlags().merging(own) { _, game in game }
+    }
 
     public func validated() throws -> EngineConfiguration {
         var result = self

@@ -13,8 +13,10 @@ public struct PlaySession: Codable, Equatable, Identifiable, Sendable {
 
 public enum PlayerLogEvent: Equatable, Sendable {
     case joining(String), left
+    case serverConnected(ServerEndpoint)
     case richPresence(BloxstrapPresencePatch)
     public static func parse(_ line: String) -> PlayerLogEvent? {
+        if let endpoint = ServerEndpoint.parse(line) { return .serverConnected(endpoint) }
         if line.contains("[FLog::Output] [BloxstrapRPC]") {
             return BloxstrapPresencePatch.parse(line).map(PlayerLogEvent.richPresence)
         }
