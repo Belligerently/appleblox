@@ -44,6 +44,7 @@ final class LauncherModel {
     var canSaveHistory = true
     var historyRevision = 0
     var discordStatus = "Off"
+    var isQuittingAfterPlayer = false
     var pendingLink: LaunchLink?
     var isBusy: Bool { isLaunching || isApplyingEngine || isWorkingFeature }
 
@@ -84,12 +85,14 @@ final class LauncherModel {
 
     func updateRunningStatus() {
         let running = !NSRunningApplication.runningApplications(withBundleIdentifier: RobloxInstallation.bundleIdentifier).isEmpty
+        let playerClosed = isRunning && !running
         if running != isRunning {
             record(running ? "Roblox started." : "Roblox quit.")
             if !running { finishCurrentSession() }
         }
         isRunning = running
         status = installation == nil ? "Roblox not found" : (running ? "Roblox is running" : "Ready to launch")
+        if playerClosed { quitLauncherAfterPlayerExit() }
     }
 
     func quitRoblox() {

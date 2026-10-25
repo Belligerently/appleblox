@@ -136,6 +136,9 @@ struct IntegrationsView: View {
             Section("Play history & behavior") {
                 featureToggle("Keep up to 200 recent game sessions", \.trackHistory)
                 featureToggle("Quit Player after leaving a game", \.quitAfterGame)
+                featureToggle("Quit AppleBlox when Roblox closes", \.quitLauncherWithPlayer)
+                Text("Quits after the last Player instance closes. AppleBlox stays open if a launch, install, or file operation is in progress.")
+                    .font(.caption).foregroundStyle(.secondary)
                 featureToggle("Request a new Player instance", \.newPlayerInstance)
                 Text("New instances use macOS’s standard launch option. Roblox may still restrict simultaneous sessions; separate instances share Player’s login.")
                     .font(.caption).foregroundStyle(.secondary)

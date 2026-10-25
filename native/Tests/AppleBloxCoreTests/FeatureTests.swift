@@ -233,3 +233,23 @@ private struct ModFixture {
     try Data("[FLog::Output] ! Joining game 'test' place 1818 at 127.0.0.1\n".utf8).write(to: log)
     #expect(try await reader.poll(directory: root) == [.joining("1818")])
 }
+
+@Test func quitLauncherPreferenceMigratesAndPersists() throws {
+    var object = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(FeatureSettings())) as? [String: Any])
+    object.removeValue(forKey: "quitLauncherWithPlayer")
+    object["trackHistory"] = true
+    object["discordClientID"] = "12345"
+    let previous = try JSONDecoder().decode(FeatureSettings.self, from: JSONSerialization.data(withJSONObject: object))
+    #expect(!previous.quitLauncherWithPlayer)
+    #expect(previous.trackHistory)
+    #expect(previous.discordClientID == "12345")
+    var config = NativeConfiguration()
+    config.features = previous
+    config.features.quitLauncherWithPlayer = true
+    let restored = try JSONDecoder().decode(NativeConfiguration.self, from: JSONEncoder().encode(config)).validated()
+    #expect(restored == config)
+    object["quitLauncherWithPlayer"] = "true"
+    #expect(throws: DecodingError.self) {
+        try JSONDecoder().decode(FeatureSettings.self, from: JSONSerialization.data(withJSONObject: object))
+    }
+}

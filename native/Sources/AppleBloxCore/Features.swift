@@ -29,7 +29,29 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public var automaticUpdates = false
     public var newPlayerInstance = false
     public var quitAfterGame = false
+    public var quitLauncherWithPlayer = false
     public init() {}
+
+    private enum CodingKeys: String, CodingKey {
+        case mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer
+    }
+
+    public init(from decoder: any Decoder) throws {
+        self.init()
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        mods = try values.decodeIfPresent([ContentMod].self, forKey: .mods) ?? mods
+        applyModsOnLaunch = try values.decodeIfPresent(Bool.self, forKey: .applyModsOnLaunch) ?? applyModsOnLaunch
+        accounts = try values.decodeIfPresent([RobloxAccount].self, forKey: .accounts) ?? accounts
+        selectedAccountID = try values.decodeIfPresent(Int64.self, forKey: .selectedAccountID)
+        discordPresence = try values.decodeIfPresent(Bool.self, forKey: .discordPresence) ?? discordPresence
+        discordClientID = try values.decodeIfPresent(String.self, forKey: .discordClientID) ?? discordClientID
+        trackHistory = try values.decodeIfPresent(Bool.self, forKey: .trackHistory) ?? trackHistory
+        checkUpdatesOnOpen = try values.decodeIfPresent(Bool.self, forKey: .checkUpdatesOnOpen) ?? checkUpdatesOnOpen
+        automaticUpdates = try values.decodeIfPresent(Bool.self, forKey: .automaticUpdates) ?? automaticUpdates
+        newPlayerInstance = try values.decodeIfPresent(Bool.self, forKey: .newPlayerInstance) ?? newPlayerInstance
+        quitAfterGame = try values.decodeIfPresent(Bool.self, forKey: .quitAfterGame) ?? quitAfterGame
+        quitLauncherWithPlayer = try values.decodeIfPresent(Bool.self, forKey: .quitLauncherWithPlayer) ?? quitLauncherWithPlayer
+    }
 
     public func validated() throws -> FeatureSettings {
         guard Set(mods.map(\.id)).count == mods.count, mods.allSatisfy({ !$0.name.isEmpty && $0.fileCount > 0 }),

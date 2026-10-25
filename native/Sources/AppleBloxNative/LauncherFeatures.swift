@@ -16,6 +16,29 @@ extension LauncherModel {
         } catch { report(error) }
     }
 
+    func quitLauncherAfterPlayerExit() {
+        guard configuration.features.quitLauncherWithPlayer, !isBusy, !isQuittingAfterPlayer else { return }
+        isQuittingAfterPlayer = true
+        Task {
+            defer { isQuittingAfterPlayer = false }
+            await discord.disconnect()
+            // Finish and flush history before terminating; older queued snapshots cannot replace this revision.
+            finishCurrentSession()
+            if canSaveHistory, configuration.features.trackHistory {
+                historyRevision += 1
+                do { try await historyStore.save(history, revision: historyRevision) }
+                catch {
+                    canSaveHistory = false
+                    errorMessage = "AppleBlox stayed open because play history couldn’t be saved."
+                    return
+                }
+            }
+            guard configuration.features.quitLauncherWithPlayer, !isBusy,
+                  NSRunningApplication.runningApplications(withBundleIdentifier: RobloxInstallation.bundleIdentifier).isEmpty else { return }
+            NSApplication.shared.terminate(nil)
+        }
+    }
+
     func setDiscordClientID(_ id: String) throws {
         var next = configuration
         next.features.discordClientID = id.trimmingCharacters(in: .whitespacesAndNewlines)
