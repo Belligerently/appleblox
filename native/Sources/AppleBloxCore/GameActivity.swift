@@ -13,7 +13,11 @@ public struct PlaySession: Codable, Equatable, Identifiable, Sendable {
 
 public enum PlayerLogEvent: Equatable, Sendable {
     case joining(String), left
+    case richPresence(BloxstrapPresencePatch)
     public static func parse(_ line: String) -> PlayerLogEvent? {
+        if line.contains("[FLog::Output] [BloxstrapRPC]") {
+            return BloxstrapPresencePatch.parse(line).map(PlayerLogEvent.richPresence)
+        }
         if line.contains("[FLog::Output] ! Joining game"),
            let range = line.range(of: #"\bplace\s+(\d+)\b"#, options: .regularExpression) {
             let id = line[range].split(whereSeparator: { $0.isWhitespace }).last.map(String.init) ?? ""

@@ -22,6 +22,8 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public var applyModsOnLaunch = false
     public var accounts: [RobloxAccount] = []
     public var selectedAccountID: Int64?
+    public var bloxstrapSDK = false
+    public var gameControlledPresence = false
     public var discordPresence = false
     public var discordPlayTime = true
     public var discordGameActivity = true
@@ -38,12 +40,14 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordPlayTime, discordGameActivity, discordArtwork, discordGameButton, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
+        case bloxstrapSDK, gameControlledPresence, mods, applyModsOnLaunch, accounts, selectedAccountID, discordPresence, discordPlayTime, discordGameActivity, discordArtwork, discordGameButton, discordClientID, trackHistory, checkUpdatesOnOpen, automaticUpdates, newPlayerInstance, quitAfterGame, quitLauncherWithPlayer, returnToWebsite
     }
 
     public init(from decoder: any Decoder) throws {
         self.init()
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        bloxstrapSDK = try values.decodeIfPresent(Bool.self, forKey: .bloxstrapSDK) ?? false
+        gameControlledPresence = try values.decodeIfPresent(Bool.self, forKey: .gameControlledPresence) ?? false
         mods = try values.decodeIfPresent([ContentMod].self, forKey: .mods) ?? mods
         applyModsOnLaunch = try values.decodeIfPresent(Bool.self, forKey: .applyModsOnLaunch) ?? applyModsOnLaunch
         accounts = try values.decodeIfPresent([RobloxAccount].self, forKey: .accounts) ?? accounts
@@ -63,8 +67,11 @@ public struct FeatureSettings: Codable, Equatable, Sendable {
         returnToWebsite = try values.decodeIfPresent(Bool.self, forKey: .returnToWebsite) ?? returnToWebsite
     }
 
+    public var needsLogTracking: Bool { trackHistory || discordPresence || quitAfterGame || bloxstrapSDK }
+    public var allowsGamePresence: Bool { bloxstrapSDK && gameControlledPresence && discordPresence && discordGameActivity }
+
     public var discordOptions: DiscordPresenceOptions {
-        .init(showGameActivity: discordGameActivity, showPlayTime: discordPlayTime, showArtwork: discordArtwork, showGameButton: discordGameButton)
+        .init(showGameActivity: discordGameActivity, showPlayTime: discordPlayTime, showArtwork: discordArtwork, showGameButton: discordGameButton, allowGameControl: bloxstrapSDK && gameControlledPresence)
     }
 
     public func validated() throws -> FeatureSettings {

@@ -10,11 +10,11 @@ public actor DiscordPresenceClient {
     public init(socketRoots: [String]? = nil) { self.socketRoots = socketRoots }
     deinit { if descriptor >= 0 { Darwin.close(descriptor) } }
 
-    public func update(clientID: String, session: PlaySession?, running: Bool, options: DiscordPresenceOptions = .init(), game: GameDetails? = nil) throws {
+    public func update(clientID: String, session: PlaySession?, running: Bool, options: DiscordPresenceOptions = .init(), game: GameDetails? = nil, custom: BloxstrapPresenceState? = nil, artwork: [String: URL] = [:]) throws {
         guard running else { disconnect(); return }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        let activityData = try encoder.encode(DiscordActivity(session: session, game: game, options: options))
+        let activityData = try encoder.encode(DiscordActivity(session: session, game: game, options: options, custom: custom, artwork: artwork))
         do {
             if descriptor < 0 || self.clientID != clientID {
                 disconnect()

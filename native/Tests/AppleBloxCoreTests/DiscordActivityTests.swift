@@ -75,9 +75,9 @@ private func activityGame(placeID: String = "1818", creator: String = "ROBLOX", 
     let session = PlaySession(placeID: "1818", name: name)
     let game = activityGame(creator: String(repeating: "x", count: 250))
     let activity = DiscordActivity(session: session, game: game, options: .init(showArtwork: true))
-    #expect(activity.details.unicodeScalars.count <= 128)
-    #expect(activity.state.unicodeScalars.count <= 128)
-    #expect(!activity.details.contains("\n"))
+    #expect((activity.details ?? "").unicodeScalars.count <= 128)
+    #expect((activity.state ?? "").unicodeScalars.count <= 128)
+    #expect(activity.details?.contains("\n") == false)
     for place in ["1818?token=secret", "https://evil.test", "0", "-1"] {
         let invalid = DiscordActivity(session: PlaySession(placeID: place, name: "Bad game"), game: game, options: .init(showArtwork: true))
         #expect(invalid.details == "Playing Roblox")

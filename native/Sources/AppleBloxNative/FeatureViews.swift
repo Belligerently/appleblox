@@ -167,6 +167,15 @@ struct IntegrationsView: View {
                 Text("Uses Discord desktop’s local IPC connection. The inherited AppleBlox application ID is the default; enter your own ID for separate fork branding.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("Bloxstrap SDK") {
+                featureToggle("Enable Bloxstrap SDK compatibility", \.bloxstrapSDK)
+                featureToggle("Allow games to customize Discord presence", \.gameControlledPresence)
+                    .disabled(!model.configuration.features.bloxstrapSDK || !model.configuration.features.discordPresence || !model.configuration.features.discordGameActivity)
+                Text("Supports SetRichPresence messages from the current game. Your game-visibility, artwork, and elapsed-time controls still apply. Changes reset when you leave or disable game control.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text("SDK images use public Roblox asset thumbnails. Launch-data and server-invite commands are not supported.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Play history & behavior") {
                 featureToggle("Keep up to 200 recent game sessions", \.trackHistory)
                 featureToggle("Quit Player after leaving a game", \.quitAfterGame)

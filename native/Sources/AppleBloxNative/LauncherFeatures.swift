@@ -8,11 +8,17 @@ extension LauncherModel {
             var next = configuration
             next.features[keyPath: keyPath] = value
             try persist(next)
-            if !next.features.trackHistory && !next.features.discordPresence && !next.features.quitAfterGame {
+            if !next.features.needsLogTracking {
                 finishCurrentSession()
                 Task { await logReader.reset() }
             }
             if !next.features.discordPresence { Task { await discord.disconnect() }; discordStatus = "Off" }
+            if !next.features.allowsGamePresence { resetGamePresence() }
+            if !next.features.discordArtwork {
+                presenceArtworkTask?.cancel(); presenceArtworkTask = nil; presenceArtworkLookupID = nil
+                gamePresenceArtwork = [:]
+            }
+            refreshPresenceArtworkIfNeeded()
             refreshCurrentGameDetailsIfNeeded()
         } catch { report(error) }
     }
@@ -404,7 +410,32 @@ extension LauncherModel {
         return Bundle(url: app)?.bundleIdentifier == Bundle.main.bundleIdentifier
     }
 
+    func resetGamePresence() {
+        presenceArtworkTask?.cancel(); presenceArtworkTask = nil; presenceArtworkLookupID = nil
+        nextPresenceArtworkAttempt = .distantPast
+        gamePresence = BloxstrapPresenceState()
+        gamePresenceArtwork = [:]
+    }
+
+    func refreshPresenceArtworkIfNeeded() {
+        guard configuration.features.allowsGamePresence, configuration.features.discordArtwork,
+              let session = currentSession, presenceArtworkTask == nil, Date() >= nextPresenceArtworkAttempt else { return }
+        let ids = gamePresence.assetIDs
+        guard ids.contains(where: { gamePresenceArtwork[$0] == nil }) else { return }
+        nextPresenceArtworkAttempt = Date().addingTimeInterval(10)
+        let lookupID = UUID()
+        presenceArtworkLookupID = lookupID
+        presenceArtworkTask = Task {
+            defer { if presenceArtworkLookupID == lookupID { presenceArtworkTask = nil; presenceArtworkLookupID = nil } }
+            let images = await presenceArtworkCatalog.images(for: ids)
+            guard !Task.isCancelled, presenceArtworkLookupID == lookupID, currentSession?.id == session.id,
+                  configuration.features.allowsGamePresence, configuration.features.discordArtwork else { return }
+            gamePresenceArtwork = images
+        }
+    }
+
     func finishCurrentSession() {
+        resetGamePresence()
         gameDetailsTask?.cancel(); gameDetailsTask = nil; gameDetailsLookupID = nil
         currentGameDetails = nil
         nextGameDetailsAttempt = .distantPast
@@ -461,11 +492,11 @@ extension LauncherModel {
                     await installRobloxUpdate(at: installation.url)
                 }
             }
-            if configuration.features.trackHistory || configuration.features.discordPresence || configuration.features.quitAfterGame {
+            if configuration.features.needsLogTracking {
                 do {
                     let logs = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Roblox")
                     for event in try await logReader.poll(directory: logs) {
-                        guard isRunning, configuration.features.trackHistory || configuration.features.discordPresence || configuration.features.quitAfterGame else { break }
+                        guard isRunning, configuration.features.needsLogTracking else { break }
                         switch event {
                         case .joining(let placeID):
                             finishCurrentSession()
@@ -479,6 +510,17 @@ extension LauncherModel {
                             }
                             refreshCurrentGameDetailsIfNeeded()
                             record("Joined \(currentSession?.name ?? fallback).")
+                        case .richPresence(let patch):
+                            guard currentSession != nil, configuration.features.allowsGamePresence else { continue }
+                            let previousIDs = gamePresence.assetIDs
+                            gamePresence.apply(patch)
+                            // Text-only updates must not repeatedly cancel an image lookup in flight.
+                            let ids = gamePresence.assetIDs
+                            if ids != previousIDs {
+                                gamePresenceArtwork = gamePresenceArtwork.filter { ids.contains($0.key) }
+                                presenceArtworkTask?.cancel(); presenceArtworkTask = nil; presenceArtworkLookupID = nil
+                            }
+                            refreshPresenceArtworkIfNeeded()
                         case .left:
                             let wasPlaying = currentSession != nil
                             finishCurrentSession()
@@ -488,15 +530,17 @@ extension LauncherModel {
                 } catch { record("Roblox logs couldn’t be read. Activity tracking will retry.") }
             }
             refreshCurrentGameDetailsIfNeeded()
+            refreshPresenceArtworkIfNeeded()
             if configuration.features.discordPresence {
                 do {
-                    try await discord.update(clientID: configuration.features.discordClientID, session: currentSession, running: isRunning, options: configuration.features.discordOptions, game: currentGameDetails)
+                    try await discord.update(clientID: configuration.features.discordClientID, session: currentSession, running: isRunning, options: configuration.features.discordOptions, game: currentGameDetails, custom: gamePresence, artwork: gamePresenceArtwork)
                     discordStatus = isRunning ? "Connected to Discord" : "Waiting for Roblox"
                 } catch { discordStatus = error.localizedDescription }
             } else { await discord.disconnect() }
             do { try await Task.sleep(for: .seconds(2)) } catch { break }
         }
         gameDetailsTask?.cancel(); gameDetailsTask = nil; gameDetailsLookupID = nil
+        resetGamePresence()
         await discord.disconnect()
     }
 }

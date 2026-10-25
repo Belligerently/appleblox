@@ -137,12 +137,19 @@ import Testing
     _ = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout.size(ofValue: timeout)))
     let game = GameDetails(placeID: "1818", universeID: 111, name: "Test", creator: "Creator", playing: nil,
                            iconURL: URL(string: "https://tr.rbxcdn.com/test.png"), fetchedAt: Date())
-    let scenarios: [(DiscordPresenceOptions, GameDetails?)] = [
-        (.init(), nil), (.init(showPlayTime: false), nil), (.init(), nil),
-        (.init(showArtwork: true), game),
-        (.init(showGameActivity: false, showArtwork: true), game),
-        (.init(showGameButton: false), game),
-        (.init(showArtwork: true), nil)
+    var sdkDraft = BloxstrapPresenceState()
+    sdkDraft.apply(try #require(BloxstrapPresencePatch.parse(#"[FLog::Output] [BloxstrapRPC] {"command":"SetRichPresence","data":{"details":"SDK round","state":"In lobby","smallImage":{"assetId":10,"hoverText":"SDK icon"}}}"#)))
+    let sdk = sdkDraft
+    let sdkImages = ["10": URL(string: "https://tr.rbxcdn.com/sdk.png")!]
+    let scenarios: [(DiscordPresenceOptions, GameDetails?, BloxstrapPresenceState?)] = [
+        (.init(), nil, nil), (.init(showPlayTime: false), nil, nil), (.init(), nil, nil),
+        (.init(showArtwork: true), game, nil),
+        (.init(showGameActivity: false, showArtwork: true), game, nil),
+        (.init(showGameButton: false), game, nil),
+        (.init(showArtwork: true), nil, nil),
+        (.init(showArtwork: true, allowGameControl: true), game, sdk),
+        (.init(showPlayTime: false, allowGameControl: true), game, sdk),
+        (.init(showGameActivity: false, showArtwork: true, allowGameControl: true), game, sdk)
     ]
     // The client uses blocking socket I/O. Its peer must not depend on the same
     // cooperative Swift executor, which may have only one worker available in CI.
@@ -181,16 +188,19 @@ import Testing
                     guard handshake["client_id"] as? String == "123" else { return false }
                     try send(Data(#"{"evt":"READY"}"#.utf8))
                     for index in scenarios.indices {
-                        let showTime = index != 1
+                        let showTime = ![1, 8].contains(index)
                         let command = try receive()
                         let args = try #require(command["args"] as? [String: Any])
                         let activity = try #require(args["activity"] as? [String: Any])
                         #expect(command["cmd"] as? String == "SET_ACTIVITY")
-                        #expect(activity["details"] as? String == (index == 4 ? "Playing Roblox" : "Test"))
-                        #expect(activity["state"] as? String == (index == 3 ? "by Creator" : "Playing with AppleBlox Native"))
-                        #expect((activity["assets"] != nil) == (index == 3))
+                        #expect(activity["details"] as? String == ([4, 9].contains(index) ? "Playing Roblox" : ([7, 8].contains(index) ? "SDK round" : "Test")))
+                        #expect(activity["state"] as? String == (index == 3 ? "by Creator" : ([7, 8].contains(index) ? "In lobby" : "Playing with AppleBlox Native")))
+                        #expect((activity["assets"] != nil) == ([3, 7].contains(index)))
                         if index == 3 {
                             #expect((activity["assets"] as? [String: String])?["large_image"] == "https://tr.rbxcdn.com/test.png")
+                        }
+                        if index == 7 {
+                            #expect((activity["assets"] as? [String: String])?["small_image"] == "https://tr.rbxcdn.com/sdk.png")
                         }
                         #expect((activity["timestamps"] != nil) == showTime)
                         if showTime {
@@ -198,7 +208,7 @@ import Testing
                             #expect(timestamps["start"] as? Int == 1_700_000_000)
                         }
                         let buttonURL = (activity["buttons"] as? [[String: String]])?.first?["url"]
-                        #expect(buttonURL == ([4, 5].contains(index) ? nil : "https://www.roblox.com/games/1818/"))
+                        #expect(buttonURL == ([4, 5, 9].contains(index) ? nil : "https://www.roblox.com/games/1818/"))
                         try send(Data("{}".utf8), opcode: 3)
                         _ = try receive() // PONG
                         try send(JSONSerialization.data(withJSONObject: ["nonce": command["nonce"] ?? ""]))
@@ -212,10 +222,10 @@ import Testing
     }
     let client = DiscordPresenceClient(socketRoots: [root.path])
     let session = PlaySession(placeID: "1818", name: "Test", startedAt: Date(timeIntervalSince1970: 1_700_000_000))
-    for (options, metadata) in scenarios {
-        try await client.update(clientID: "123", session: session, running: true, options: options, game: metadata)
+    for (options, metadata, custom) in scenarios {
+        try await client.update(clientID: "123", session: session, running: true, options: options, game: metadata, custom: custom, artwork: sdkImages)
         // Unchanged payloads should not send another command; metadata/options changes above must send immediately.
-        try await client.update(clientID: "123", session: session, running: true, options: options, game: metadata)
+        try await client.update(clientID: "123", session: session, running: true, options: options, game: metadata, custom: custom, artwork: sdkImages)
     }
     for try await success in server { #expect(success) }
     await client.disconnect()

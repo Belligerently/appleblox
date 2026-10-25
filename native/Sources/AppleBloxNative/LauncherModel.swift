@@ -40,6 +40,12 @@ final class LauncherModel {
     var isCheckingUpdates = false
     var updateTask: Task<Void, Never>?
     var previousInstallation: URL?
+    let presenceArtworkCatalog = PresenceArtworkCatalog()
+    var gamePresence = BloxstrapPresenceState()
+    var gamePresenceArtwork: [String: URL] = [:]
+    var presenceArtworkTask: Task<Void, Never>?
+    var presenceArtworkLookupID: UUID?
+    var nextPresenceArtworkAttempt = Date.distantPast
     var currentSession: PlaySession?
     var currentGameDetails: GameDetails?
     var gameDetailsTask: Task<Void, Never>?
