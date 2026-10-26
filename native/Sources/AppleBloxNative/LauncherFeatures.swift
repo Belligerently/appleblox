@@ -492,6 +492,7 @@ extension LauncherModel {
     }
 
     func runServices() async {
+        await restoreSavedDockIcon()
         do { history = try await historyStore.load() }
         catch { canSaveHistory = false; record("History file is unreadable and has been preserved.") }
         var lastUpdateCheck = Date.distantPast

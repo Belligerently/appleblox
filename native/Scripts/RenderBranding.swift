@@ -29,26 +29,32 @@ struct RenderBranding {
         context.translateBy(x: 0, y: size.height)
         context.scaleBy(x: 1, y: -1)
         if tile {
-            // Match the system icon's 80% tile footprint within the icon canvas.
-            let inset = size.width * 0.10
+            // Match the inherited AppleBlox tile footprint and dark burgundy glass finish.
+            let inset = size.width * 0.075
             let rect = CGRect(x: inset, y: inset, width: size.width - 2 * inset, height: size.height - 2 * inset)
             let shape = CGPath(roundedRect: rect, cornerWidth: size.width * 0.18, cornerHeight: size.height * 0.18, transform: nil)
             context.saveGState()
             context.addPath(shape)
             context.clip()
-            // Sampled from the Claude dark icon: charcoal at the top, near-black below.
-            // Use RGB components to avoid grayscale-to-RGB gamma conversion.
-            let top = CGColor(colorSpace: space, components: [44 / 255, 44 / 255, 44 / 255, 1])!
-            let bottom = CGColor(colorSpace: space, components: [17 / 255, 17 / 255, 17 / 255, 1])!
+            // Original AppleBlox uses near-black burgundy glass with a bright beveled rim.
+            let top = CGColor(colorSpace: space, components: [12 / 255, 0, 0, 1])!
+            let bottom = CGColor(colorSpace: space, components: [48 / 255, 0, 0, 1])!
             let gradient = CGGradient(colorsSpace: space, colors: [top, bottom] as CFArray, locations: [0, 1])!
             context.drawLinearGradient(gradient, start: CGPoint(x: size.width / 2, y: inset), end: CGPoint(x: size.width / 2, y: size.height - inset), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
             context.restoreGState()
             context.addPath(shape)
-            context.setStrokeColor(CGColor(gray: 1, alpha: 0.10))
-            context.setLineWidth(max(0.5, size.width / 512))
-            context.strokePath()
+            context.saveGState()
+            context.setLineWidth(max(0.6, size.width * 0.009))
+            context.replacePathWithStrokedPath()
+            context.clip()
+            let rim = CGGradient(colorsSpace: space, colors: [CGColor(gray: 0.9, alpha: 0.65),
+                CGColor(red: 0.25, green: 0.05, blue: 0.08, alpha: 0.2),
+                CGColor(gray: 0.8, alpha: 0.5)] as CFArray, locations: [0, 0.5, 1])!
+            context.drawLinearGradient(rim, start: CGPoint(x: inset, y: inset),
+                end: CGPoint(x: size.width - inset, y: size.height - inset), options: [])
+            context.restoreGState()
         }
-        let scale = min(size.width / 408, size.height / 434) * (tile ? 0.60 : 0.96)
+        let scale = min(size.width / 408, size.height / 434) * (tile ? 0.70 : 0.96)
         context.translateBy(x: (size.width - 408 * scale) / 2, y: (size.height - 434 * scale) / 2)
         context.scaleBy(x: scale, y: scale)
         let gradient = CGGradient(colorsSpace: space,
@@ -70,6 +76,32 @@ struct RenderBranding {
                               locations: [0, 1])!
         fill(ForkLogoGeometry.leafPath(), paint: blue,
              start: CGPoint(x: 337, y: 0), end: CGPoint(x: 216, y: 82))
+        if tile {
+            func bevel(_ path: CGPath, rule: CGPathFillRule = .winding, light: CGColor, dark: CGColor) {
+                context.saveGState()
+                context.addPath(path)
+                context.clip(using: rule)
+                // Layer narrow strokes for the soft molded edge of the inherited icon.
+                for thickness in stride(from: 14.0, through: 2.0, by: -2.0) {
+                    context.saveGState()
+                    context.addPath(path)
+                    context.setLineWidth(thickness)
+                    context.replacePathWithStrokedPath()
+                    context.clip()
+                    let edge = CGGradient(colorsSpace: space,
+                        colors: [light.copy(alpha: 0.12)!, dark.copy(alpha: 0.14)!] as CFArray, locations: [0, 1])!
+                    context.drawLinearGradient(edge, start: CGPoint(x: 0, y: 0), end: CGPoint(x: 180, y: 434),
+                        options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+                    context.restoreGState()
+                }
+                context.restoreGState()
+            }
+            bevel(ForkLogoGeometry.bodyPath(), rule: .evenOdd,
+                light: CGColor(red: 1, green: 0.38, blue: 0.52, alpha: 0.6),
+                dark: CGColor(red: 0.15, green: 0, blue: 0.04, alpha: 0.65))
+            bevel(ForkLogoGeometry.leafPath(), light: CGColor(red: 0.7, green: 0.92, blue: 1, alpha: 0.6),
+                dark: CGColor(red: 0, green: 0.15, blue: 0.4, alpha: 0.6))
+        }
         guard let image = context.makeImage(),
               let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else {
             throw CocoaError(.fileWriteUnknown)

@@ -72,6 +72,10 @@ final class LauncherModel {
     var historyRevision = 0
     var discordStatus = "Off"
     var maintenanceStatus = ""
+    let launcherIconLibrary: LauncherIconLibrary
+    var launcherIconPreviews: [LauncherIconPreview] = []
+    var selectedLauncherIcon: LauncherIconChoice? = .default
+    var launcherIconStatus = "Choose an icon for this launcher."
     let launcherLogs: LauncherLogStore
     let supportExporter = SupportBundleExporter()
     var supportBundleReview: SupportBundleDraft?
@@ -85,6 +89,8 @@ final class LauncherModel {
     var isBusy: Bool { isLaunching || isApplyingEngine || isWorkingFeature }
 
     init(directory: URL = ConfigurationStore.defaultDirectory()) {
+        launcherIconLibrary = LauncherIconLibrary(dataDirectory: directory,
+            resources: Bundle.main.resourceURL ?? directory.appendingPathComponent("missing-resources"))
         launcherLogs = LauncherLogStore(dataDirectory: directory)
         store = ConfigurationStore(directory: directory)
         clientSettings = ClientSettingsStore(directory: directory.appendingPathComponent("engine-backups", isDirectory: true))

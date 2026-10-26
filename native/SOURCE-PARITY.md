@@ -10,7 +10,7 @@ Sources: [Appearance.svelte](../legacy/frontend/src/windows/main/pages/Appearanc
 
 | Original feature | Native status | Exact difference / remaining work |
 | --- | --- | --- |
-| Launcher app-icon library: built-in/original icons, previews, custom `.icns` upload, apply confirmation, delete and original-icon recovery | Not ported | Native ships the fixed red-body/blue-leaf fork icon. That branding is present, but there is no user-managed launcher-icon library. Roblox UI icon-color mods affect Player fonts and do not implement this feature. |
+| Launcher app-icon library: built-in/original icons, previews, custom `.icns` upload, apply confirmation, delete and original-icon recovery | Partial / adaptation | Appearance → Manage Launcher Icons provides the Native default, six inherited styles, ICNS imports, previews, confirmed application, persisted Dock selection, recoverable removal and default restoration. Finder customization remains unimplemented: the macOS custom-file-icon call stalled in isolated QA and is excluded from this build. Bundled resources are never replaced. Applied icons must be changed before removal; removed copies remain in launcher-icons/removed. |
 | Custom theme CSS: edit/save, reveal CSS file, reload | Partial / adaptation | Native has System/Light/Dark themes, the fork palette, reduced animation, solid backgrounds and appearance reset. Arbitrary theme editing/import/export is absent; legacy CSS cannot directly style SwiftUI views. A native theme format would be a separate design decision. |
 | Bloxstrap/Fishstrap bootstrapper themes: XML/ZIP import with assets, preview library, activate, rename, delete, reveal, refresh | Not ported | Native has no themed bootstrapper renderer or theme-library workflow. This includes both the import/library UI and the launch-screen rendering implementation, not just reading XML. |
 
@@ -46,7 +46,8 @@ Sources: [Info.svelte](../legacy/frontend/src/windows/main/pages/Info.svelte), [
 The audit is complete; implementation of the missing items is not. These entries do not count toward screenshot completion.
 
 - [x] Audit original Appearance, Misc and Info controls and their nested components.
-- [ ] User-managed launcher-icon library, custom icon selection and recovery.
+- [x] Dock-icon library: bundled/original previews, custom ICNS import, saved selection, confirmed apply, recoverable removal and default recovery.
+- [ ] Finder app-icon customization; the native system call stalled in isolated QA and is not shipped.
 - [ ] Decide/design portable native custom themes; legacy CSS editing remains unported.
 - [ ] Bootstrapper theme library and renderer, including XML/ZIP assets and library actions.
 - [ ] Decide whether to retain fixed-duration bootstrapper steps.
@@ -59,4 +60,4 @@ The audit is complete; implementation of the missing items is not. These entries
 
 Already tracked elsewhere: online Workshop, server-region selection, background updates while the launcher is closed, and native self-updating. Actual notifications, Discord, FPS/display restoration, simultaneous Players, authenticated accounts and in-game rendering remain acceptance work, not findings that this documentation audit verifies.
 
-Completed clusters: About credits/community, offline documentation and folder shortcuts; persistent bounded event logs and reviewed local support ZIP export. Bootstrapper themes, full settings backup and full reset need their own implementation and validation work.
+Completed clusters: saved Dock-icon library (Finder changes remain pending); About credits/community, offline documentation and folder shortcuts; persistent bounded event logs and reviewed local support ZIP export. Bootstrapper themes, full settings backup and full reset need their own implementation and validation work.

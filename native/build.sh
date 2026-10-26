@@ -22,6 +22,8 @@ cp ../LICENSE "$APP/Contents/Resources/LICENSE"
 xcrun swiftc Sources/AppleBloxNative/ForkLogoGeometry.swift Scripts/RenderBranding.swift -o .build/render-branding
 .build/render-branding "$PWD/.build/branding"
 iconutil -c icns .build/branding/AppIcon.iconset -o "$APP/Contents/Resources/AppIcon-BlueLeaf-Charcoal.icns"
+mkdir -p "$APP/Contents/Resources/LauncherIcons"
+cp Resources/LauncherIcons/*.icns "$APP/Contents/Resources/LauncherIcons/"
 cp Resources/Branding/AppleBloxFork.svg "$APP/Contents/Resources/AppleBloxFork.svg"
 codesign --force --sign - "$APP"
 printf 'Built %s\n' "$APP"

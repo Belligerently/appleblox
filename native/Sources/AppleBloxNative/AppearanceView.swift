@@ -4,6 +4,7 @@ import SwiftUI
 
 struct AppearanceView: View {
     let model: LauncherModel
+    @State private var showIconLibrary = false
 
     var body: some View {
         Form {
@@ -22,12 +23,18 @@ struct AppearanceView: View {
                     .font(.caption).foregroundStyle(.secondary)
             } header: { Text("My Games") }
             Section {
+                Button("Manage Launcher Icons…", systemImage: "app.badge") { showIconLibrary = true }
+                Text("Preview original AppleBlox styles or import an ICNS icon. Applying changes this launcher’s Dock icon. Finder customization is not available.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } header: { Text("Launcher Icon") }
+            Section {
                 Button("Reset Appearance") { save(AppearanceSettings()) }
             }
         }
         .formStyle(.grouped).scrollContentBackground(.hidden).controlSize(.small)
         .contentMargins(.horizontal, 0, for: .scrollContent)
         .disabled(!model.canSave)
+        .sheet(isPresented: $showIconLibrary) { LauncherIconLibraryView(model: model) }
     }
 
     private func preference<Value>(_ keyPath: WritableKeyPath<AppearanceSettings, Value>) -> Binding<Value> {

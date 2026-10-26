@@ -75,6 +75,9 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 
 ## Native maintenance (outside the screenshot audit)
 
+- [x] Saved Dock-icon library: Native default plus six original AppleBlox styles, local previews, bounded ICNS imports, apply confirmation, recoverable removal, default restoration, and automatic Dock restoration on launch.
+- [ ] Finder icon customization. A live system-call stall was reproduced in isolated QA; the final implementation does not call that API or replace bundled icon resources.
+
 - [x] Persistent native event logs and a separate Launcher Logs folder action. One atomic private journal rotates up to four 64 KiB segments; unrelated files are untouched. Timestamps, typed codes, bounded counts and numeric errors only; raw session messages stay in memory.
 - [x] Reviewed local support ZIP: exact file previews, optional events, fixed preference summary and diagnostics. Unreadable sources are omitted with notes; no directory scanning, credentials, full settings, raw logs or automatic upload. Existing destinations are never replaced. This is not a settings backup.
 
@@ -89,6 +92,9 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 - [x] Appearance-only reset already exists under More → Appearance.
 
 ## Acceptance checks
+
+- [x] Isolated Dock-icon UI: seven bundled previews, apply confirmation, successful persisted original-style selection, default recovery, responsive dismissal and ordinary quit. Signed resources still verify after these actions. 12 new tests cover imports, duplicate names, invalid/oversized/linked assets, actual bundled image decoding, selection persistence, failure/rollback, corruption recovery, recoverable removal, concurrent mutation and library limits.
+- [x] Default app icon refreshed to the original AppleBlox dark burgundy tile/bevel style while retaining the fork’s red-body/blue-leaf logo.
 
 - [x] Isolated support UI: exact README/event previews, cancel, optional event omission, local ZIP save and separate Launcher Logs opening in Finder. Inspected the resulting ZIP (events omitted as chosen, three fixed files, private permissions). 11 new automated tests cover bounded rotation/restart, safe fields, corrupt/oversized/linked journals, unrelated-file preservation, immutable snapshots, exact archive bytes and failure/collision cleanup. No Player, Discord, account or display changes.
 
