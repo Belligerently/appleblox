@@ -1,5 +1,7 @@
 # Original AppleBlox screenshot parity
 
+For the combined remaining-feature and release checklist, see [CHECKLIST.md](CHECKLIST.md).
+
 Compared against all seven images in the [upstream README gallery](https://github.com/AppleBlox/appleblox#gallery). Checked items mean implemented; runtime acceptance work is tracked separately below.
 
 - [x] Server-location lookup and “Server Joined” notifications — independent opt-in settings; public IPv4 only, native macOS alerts, optional sounds, fallback and duplicate/rate suppression
@@ -95,6 +97,8 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 - [x] Appearance-only reset already exists under More → Appearance.
 
 ## Acceptance checks
+
+- [x] Profile-editor bounds regression: reproduced the header moving outside the sheet when Presets (430 points) changed to Flags (500 points). All three sections now share a stable compact 430-point sheet, with bounded scrollable content. Isolated UI verified empty/populated Flags, no-results search, JSON error feedback, repeated section changes and Cancel preserving the saved profile. No Player flags were applied.
 
 - [x] Isolated native-theme UI: library loads, existing palette applies, light/dark editor previews fit, unreadable accent is rejected, valid theme saves, and original palette recovers. Core tests cover strict native JSON, import limits, local reload/edit, duplicate names, linked/corrupt files, recoverable removal, migration and support-summary exclusion.
 - [x] Isolated reset UI: reviewed counts/folders/recovery path, exact RESET gate, archive plus recovery instructions opening in Finder, dismissal before automatic quit, and a fresh relaunch. Archived fixture backup and both saved themes were verified intact; archive permissions are private. Tests use fake credential cleanup; UI used a new isolated namespace with zero accounts. No real login, Player resources, Discord session or display mode was changed.

@@ -88,3 +88,5 @@ The native implementation is in `native/`. The self-contained `legacy/` folder h
 AppleBlox Native retains the [GPL-3.0 license](LICENSE) and the work of **AppleBlox and its contributors**. Original logo by **@typeofnull**; the rose body and blue leaf adapt that mark for this fork. [Bloxstrap](https://github.com/pizzaboxer/bloxstrap) inspired the original project.
 
 This is an independent fork, not an official AppleBlox release. Original project resources and legacy component credits are preserved in the [legacy notes](docs/LEGACY.md).
+
+Track remaining native functionality, accepted differences, live validation and release readiness in [the combined completion checklist](native/CHECKLIST.md).

@@ -162,3 +162,5 @@ Reset does not automatically restore or modify Roblox’s installed app, current
 Stale reviews, unknown top-level files, symlinked data roots, unreadable settings and an unrestored original-login Keychain backup block reset. A credential-cleanup failure attempts to move native data back. If another process has created a new folder and prevents that rollback, the archive stays intact and launcher writes remain gated until quit/recovery. Real authenticated-account cleanup and applied-backup restoration remain manual acceptance work.
 
 The standard native data folder keeps its existing Keychain service. Alternate/QA data folders now use a stable isolated credential service derived from their canonical path; they do not share production sessions. Existing sessions used with alternate data-folder overrides before this change require signing in again in that isolated store.
+
+The combined implementation, remaining-scope, live-acceptance and release checklist is maintained in [CHECKLIST.md](CHECKLIST.md).

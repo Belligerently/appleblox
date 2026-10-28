@@ -44,7 +44,8 @@ struct EngineProfileEditor: View {
                 case .json: jsonEditor
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
+            .clipped()
             if let message {
                 Text(message).font(.caption).foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true).lineLimit(3)
@@ -57,7 +58,8 @@ struct EngineProfileEditor: View {
                     .disabled(model.isBusy || !model.canSave)
             }
         }
-        .padding(20).frame(width: 640, height: page == .presets ? 430 : 500)
+        // A stable sheet size keeps AppKit from clipping the header during section changes.
+        .padding(20).frame(width: 640, height: 430)
         .onChange(of: flagsJSON) { message = nil }
         .sheet(isPresented: $showAdd) {
             AddFlagPicker(existing: Set(flags.rows.map(\.name))) { name in
