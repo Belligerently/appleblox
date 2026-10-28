@@ -27,7 +27,7 @@ public enum NativeResetError: LocalizedError {
 public actor NativeResetService {
     private let directory: URL
     private var resetting = false
-    private static let known: Set<String> = ["native-settings.json", "game-details-cache.json", "play-history.json", "mods", "engine-backups", "logs", "launcher-icons", "native-themes", ".DS_Store"]
+    private static let known: Set<String> = ["native-settings.json", "game-details-cache.json", "play-history.json", "mods", "engine-backups", "logs", "launcher-icons", "native-themes", "settings-recovery", ".DS_Store"]
     public init(dataDirectory: URL) {
         directory = SupportFiles.canonicalBase(dataDirectory.deletingLastPathComponent()).appendingPathComponent(dataDirectory.lastPathComponent, isDirectory: true)
     }

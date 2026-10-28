@@ -164,3 +164,12 @@ Stale reviews, unknown top-level files, symlinked data roots, unreadable setting
 The standard native data folder keeps its existing Keychain service. Alternate/QA data folders now use a stable isolated credential service derived from their canonical path; they do not share production sessions. Existing sessions used with alternate data-folder overrides before this change require signing in again in that isolated store.
 
 The combined implementation, remaining-scope, live-acceptance and release checklist is maintained in [CHECKLIST.md](CHECKLIST.md).
+
+
+### Portable settings and public browsing
+
+My Games → Browse explicitly searches Roblox's public experience index. It pages results, filters sponsored/invalid records, prevents duplicate saves, and launches through the existing profile/account pipeline. No search runs on opening the sheet, and it does not read account cookies or provide account-specific age filtering. Dismissing the sheet cancels its request. Personalized recent-game sync and exact-server history are separate backlog items.
+
+Diagnostics offers Export Settings Backup and Restore Settings Backup. The bounded, versioned JSON stores profiles (including disabled flags), game assignments, active palette and preferences. Review shows scope/counts and a JSON preview capped at 64 KiB; the complete bounded document is saved. It excludes account/session records, installation paths and resource libraries. Restore preserves local accounts/mods/installation, disables automation and integrations, refuses stale settings and saves the previous raw settings privately in `settings-recovery` before atomic replacement. Those recovery files are included in a later reset archive. With the app closed, preserve the current settings file separately before copying a reviewed recovery JSON back to `native-settings.json`; never replace Player backup directories as part of settings recovery. These files contain readable preferences/names/flags and should remain private.
+
+The full inherited-route inventory and newly reconciled gaps are in [FULL-SOURCE-AUDIT.md](FULL-SOURCE-AUDIT.md).

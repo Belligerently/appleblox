@@ -1,6 +1,6 @@
 # AppleBlox Native completion checklist
 
-Updated 2026-10-28. This is the combined working checklist; [PARITY.md](PARITY.md) contains the screenshot comparison and test evidence, and [SOURCE-PARITY.md](SOURCE-PARITY.md) contains the original Appearance/Misc/About source audit.
+Updated 2026-10-28. This is the combined working checklist; [PARITY.md](PARITY.md) contains the screenshot comparison and test evidence, and [SOURCE-PARITY.md](SOURCE-PARITY.md) contains the original Appearance/Misc/About source audit. [FULL-SOURCE-AUDIT.md](FULL-SOURCE-AUDIT.md) inventories every inherited route and nested action.
 
 A checked implementation item means native code exists, not that every real-game scenario has passed. Screenshot status is still **21 implemented (including experimental behavior), two unavailable flag controls, and one live Discord check pending**. That denominator does not cover the whole original app.
 
@@ -28,12 +28,22 @@ A checked implementation item means native code exists, not that every real-game
 - [ ] Decide whether to retain fixed-duration loading/bootstrapper steps; implement and verify if retained.
 - [ ] Online mod Workshop/catalog workflow; verify upstream service availability before choosing a compatible implementation or an agreed replacement.
 - [ ] Server-region selection, distinct from displaying a joined server's location.
-- [ ] Full online experience browser, distinct from the saved-game library.
+- [x] Public online experience browser: explicit keyword search, pagination, duplicate-safe save, website opening and existing-pipeline launch. Authenticated recents/server history remain separate below.
 - [ ] Roblox background updating while AppleBlox is closed, with explicit management of any installed background helper.
 - [ ] Native launcher self-updating and update recovery/trust handling.
-- [ ] Decide whether a portable full settings-backup workflow is required. A troubleshooting ZIP intentionally omits full configuration; reset recovery is a separate local archive.
+- [x] Portable settings backup/restore: reviewed JSON with profiles, disabled flags, saved games/assignments, active palette and preferences; stale-review rejection and private previous-settings recovery. Credentials, paths and resource libraries are excluded.
+- [ ] Decide whether full mod/icon/theme-library migration is also required; the implemented settings format is not a complete data archive.
 - [ ] Decide whether an alternate notification backend is needed after validating native macOS delivery. AppleScript notifications remain unported.
-- [ ] Final source-to-native pass over every original page and nested menu, reconciling any omissions into this checklist.
+- [x] Final source-to-native route and nested-menu inventory; findings reconciled below. This closes the audit task, not the newly identified features.
+- [ ] Authenticated Roblox recent-game sync and manual refresh/merge with local history.
+- [ ] Recorded server/job history, exact-server rejoin and last-server quick rejoin; distinct from Play Again.
+- [ ] Reviewed local play-history clearing.
+- [ ] Export a desktop launch shortcut through the native launch pipeline.
+- [ ] Flag row rename/copy, selected-row clipboard export and bulk enable/disable.
+- [ ] Local mod image previews and byte-size summaries, matching original mod cards.
+- [ ] Decide first-run onboarding versus the existing guide and opt-in pages.
+- [ ] Explicitly accept or implement the remaining source differences: manual cookie entry, whole-disk discovery, force-kill/binary instance patching, developer-only harness, and arbitrary CSS styling.
+- [ ] Decide exact-server Discord join support; the current game button opens the experience page.
 
 ## Platform limitations and native adaptations
 
@@ -63,7 +73,9 @@ Unavailable or deliberately replaced behavior must remain documented. It only le
 - [x] Actions default token remains read-only; Actions PR approval is disabled; external workflow runs require approval; allowed third-party actions are restricted.
 - [x] Native contribution, security-reporting, PR and issue templates are committed to the development PR.
 - [ ] Merge the reviewed native PR when ready. Guidance/templates become the default-branch experience after merge; settings protections are already live.
-- [ ] Pin workflow action references to reviewed full commit SHAs before enabling SHA-only policy; keep the current working workflow compatible during migration.
+- [x] Pin all active workflow action references to full commit SHAs resolved from their existing versions; allow the pinned VirusTotal revision alongside the default branch’s existing v4 reference.
+- [ ] After the pinned workflows merge, remove the temporary v4 allowlist entry and enable the repository SHA-only policy. Enabling it before merge would block old default-branch workflows.
+- [ ] Review the 22 dependency alerts reported by GitHub on the default branch (including inherited legacy dependencies); establish native relevance and a remediation plan.
 - [ ] Release signing/notarization and first-stable installation/update acceptance.
 - [ ] Repeatable benchmark comparison: standard Roblox, AppleBlox with identical settings, then a tuned profile. Record frame consistency and average FPS without assuming an improvement.
 

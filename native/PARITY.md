@@ -96,7 +96,13 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 - [x] Clear only the saved game-details cache, including memory/disk entries and obsolete in-flight lookups.
 - [x] Appearance-only reset already exists under More → Appearance.
 
+- [x] Public experience browser: explicit unauthenticated searches, paging, duplicate-safe saving, website links and launch through the existing pipeline. Authenticated recents and recorded-server rejoin remain separate gaps.
+- [x] Portable settings backup/restore: versioned bounded JSON, profile/game/palette/preferences review, local-account/mod/path preservation, automation disabled on restore, stale-review rejection and private previous-settings recovery.
+- [x] Complete inherited route/nested-action source inventory — [FULL-SOURCE-AUDIT.md](FULL-SOURCE-AUDIT.md). Newly identified omissions are recorded in CHECKLIST.md; the audit does not close those features.
+
 ## Acceptance checks
+
+- [x] 2026-10-28 cluster: 168 native tests and 12 release tests pass; universal build and signature validation pass. Isolated UI verified empty browser, a live public search, paging, saving with the saved state, local export review/save, restore confirmation gating and a one-game → two-game → restored-one-game round trip. The two-game pre-restore file remains in a 0600 recovery file under a 0700 directory. No Player launched, credentials imported or flags applied. Search failures/cancellation, malformed/oversized/linked backups, stale reviews, existing destinations and first-save/migrated defaults are covered by fixtures. Real-game launch and old-OS/Intel runtime acceptance remain open.
 
 - [x] Profile-editor bounds regression: reproduced the header moving outside the sheet when Presets (430 points) changed to Flags (500 points). All three sections now share a stable compact 430-point sheet, with bounded scrollable content. Isolated UI verified empty/populated Flags, no-results search, JSON error feedback, repeated section changes and Cancel preserving the saved profile. No Player flags were applied.
 

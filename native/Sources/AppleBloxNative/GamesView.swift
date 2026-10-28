@@ -9,6 +9,7 @@ private struct ShortcutDraft: Identifiable {
 struct GamesView: View {
     let model: LauncherModel
     @State private var draft: ShortcutDraft?
+    @State private var showBrowser = false
     @State private var query = ""
     @State private var sortByName = false
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
@@ -32,6 +33,8 @@ struct GamesView: View {
                     Text("Name").tag(true)
                 }
                 .labelsHidden().frame(width: 112).accessibilityLabel("Game sort order")
+                Button("Browse", systemImage: "globe") { showBrowser = true }
+                    .controlSize(.small)
                 Button("Add Game", systemImage: "plus") { draft = ShortcutDraft(shortcut: nil) }
                     .launchButtonStyle().controlSize(.small).disabled(!model.canSave)
             }
@@ -58,6 +61,7 @@ struct GamesView: View {
                 .animation(systemReduceMotion || appReduceMotion ? nil : .smooth(duration: 0.2), value: games)
             }
         }
+        .sheet(isPresented: $showBrowser) { ExperienceBrowserView(model: model) }
         .sheet(item: $draft) { draft in
             ShortcutEditor(model: model, shortcut: draft.shortcut)
         }

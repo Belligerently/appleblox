@@ -30,6 +30,10 @@ final class LauncherModel {
     let logReader = PlayerLogReader()
     let discord = DiscordPresenceClient()
     let historyStore: PlayHistoryStore
+    let experienceSearch = ExperienceSearch()
+    let settingsBackupService: SettingsBackupService
+    var settingsBackupReview: SettingsBackupReview?
+    var isRestoringSettings = false
     let gameCatalog: GameCatalog
     var isWorkingFeature = false
     var featureStatus = ""
@@ -94,7 +98,7 @@ final class LauncherModel {
     var isQuittingAfterPlayer = false
     var legacyImportReview: LegacyProfileImportPlan?
     var pendingLink: LaunchLink?
-    var isBusy: Bool { isResetting || isLaunching || isApplyingEngine || isWorkingFeature }
+    var isBusy: Bool { isResetting || isRestoringSettings || isLaunching || isApplyingEngine || isWorkingFeature }
 
     init(directory: URL = ConfigurationStore.defaultDirectory()) {
         accountVault = AccountVault(service: AccountVault.service(for: directory))
@@ -104,6 +108,7 @@ final class LauncherModel {
             resources: Bundle.main.resourceURL ?? directory.appendingPathComponent("missing-resources"))
         launcherLogs = LauncherLogStore(dataDirectory: directory)
         store = ConfigurationStore(directory: directory)
+        settingsBackupService = SettingsBackupService(directory: directory)
         clientSettings = ClientSettingsStore(directory: directory.appendingPathComponent("engine-backups", isDirectory: true))
         modStore = ContentModStore(directory: directory.appendingPathComponent("mods", isDirectory: true))
         historyStore = PlayHistoryStore(directory: directory)
@@ -399,12 +404,30 @@ final class LauncherModel {
     }
 
     func persist(_ next: NativeConfiguration) throws {
-        guard canSave, !isResetting else {
+        guard canSave, !isResetting, !isRestoringSettings else {
             throw CocoaError(.fileReadCorruptFile, userInfo: [NSLocalizedDescriptionKey: "Settings are unreadable. Move native-settings.json out of the data folder and restart to create fresh settings."])
         }
         try store.save(next)
         configuration = next
         record("Saved native settings.", event: .settingsSaved)
+    }
+
+    func restoreSettings(_ plan: SettingsRestorePlan) async throws {
+        guard !isBusy, canSave else { throw SettingsBackupError.changed }
+        updateRunningStatus()
+        guard !isRunning, !fpsActive else { throw FeatureError.message("Close every Roblox Player before restoring settings.") }
+        isRestoringSettings = true
+        defer { isRestoringSettings = false }
+        let recovery = try await settingsBackupService.restore(plan, current: configuration)
+        configuration = plan.restored
+        fpsStatus = "Off"
+        await discord.disconnect()
+        resetGamePresence()
+        resetServerActivity()
+        maintenanceStatus = "Settings restored. Previous settings: \(recovery.lastPathComponent) in settings-recovery. Review integrations and launch automation before enabling them again."
+        record("Restored a reviewed settings backup.")
+        isRestoringSettings = false
+        refresh()
     }
 
     func report(_ error: Error) {

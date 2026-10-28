@@ -43,3 +43,10 @@ APPLEBLOX_UNIVERSAL=1 bash native/build.sh
 ```
 
 The automation tests use temporary Git repositories and a fake GitHub API; they never create real tags or releases.
+
+
+## Workflow action revisions
+
+Active workflow actions are pinned to the exact commits resolved from their existing version tags on 2026-10-28: checkout v7 (`3d3c42e5aac5ba805825da76410c181273ba90b1`), upload-artifact v7 (`cf430e030ddbb5b0abf93d22962f4752f3646cd9`), and the manual VirusTotal action v4 (`d34968c958ae283fe976efed637081b9f9dcf74f`). Version comments retain the update context. Update pins through a reviewed PR after checking the owning repository and release changes.
+
+The repository allowlist permits the exact VirusTotal SHA and temporarily retains its existing `@v4` entry for the unchanged default branch. After this PR merges, remove that temporary entry and enable the repository's SHA-only action policy. Do not enable it while old main workflows still use floating tags. Default token permissions and external-contributor approval requirements remain unchanged.

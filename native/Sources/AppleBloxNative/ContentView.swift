@@ -384,6 +384,11 @@ struct DiagnosticsView: View {
                 PageHeading(title: "Diagnostics", subtitle: model.isRunning ? "Roblox is running" : "Roblox is not running")
                 Button("Roblox Logs", systemImage: "folder", action: model.openRobloxLogs).controlSize(.small)
                 Menu {
+                    Button("Export Settings Backup…", systemImage: "square.and.arrow.up") { model.prepareSettingsExport() }
+                        .disabled(model.isBusy || !model.canSave)
+                    Button("Restore Settings Backup…", systemImage: "square.and.arrow.down") { Task { await model.prepareSettingsImport() } }
+                        .disabled(model.isBusy || !model.canSave)
+                    Divider()
                     Button("Export Support Bundle…", systemImage: "archivebox") { Task { await model.prepareSupportBundle() } }
                         .disabled(model.isBusy)
                     Button("Open Launcher Logs", systemImage: "folder") { Task { await model.openLauncherLogs() } }
@@ -412,6 +417,9 @@ struct DiagnosticsView: View {
                 .font(.caption).foregroundStyle(.secondary).lineLimit(3)
         }
         .sheet(isPresented: $showNativeGuide) { NativeGuideView() }
+        .sheet(item: Binding(get: { model.settingsBackupReview }, set: { model.settingsBackupReview = $0 })) { review in
+            SettingsBackupReviewView(model: model, review: review)
+        }
         .sheet(item: Binding(get: { model.supportBundleReview }, set: { model.supportBundleReview = $0 })) { draft in
             SupportBundleReviewView(model: model, draft: draft)
         }
