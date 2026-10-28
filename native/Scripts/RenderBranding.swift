@@ -34,6 +34,13 @@ struct RenderBranding {
             let rect = CGRect(x: inset, y: inset, width: size.width - 2 * inset, height: size.height - 2 * inset)
             let shape = CGPath(roundedRect: rect, cornerWidth: size.width * 0.18, cornerHeight: size.height * 0.18, transform: nil)
             context.saveGState()
+            context.setShadow(offset: CGSize(width: 0, height: -5 * size.width / 1024),
+                              blur: size.width * 0.014, color: CGColor(gray: 0, alpha: 0.55))
+            context.addPath(shape)
+            context.setFillColor(CGColor(gray: 0, alpha: 1))
+            context.fillPath()
+            context.restoreGState()
+            context.saveGState()
             context.addPath(shape)
             context.clip()
             // Original AppleBlox uses near-black burgundy glass with a bright beveled rim.
@@ -42,17 +49,11 @@ struct RenderBranding {
             let gradient = CGGradient(colorsSpace: space, colors: [top, bottom] as CFArray, locations: [0, 1])!
             context.drawLinearGradient(gradient, start: CGPoint(x: size.width / 2, y: inset), end: CGPoint(x: size.width / 2, y: size.height - inset), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
             context.restoreGState()
-            context.addPath(shape)
-            context.saveGState()
-            context.setLineWidth(max(0.6, size.width * 0.009))
-            context.replacePathWithStrokedPath()
-            context.clip()
-            let rim = CGGradient(colorsSpace: space, colors: [CGColor(gray: 0.9, alpha: 0.65),
-                CGColor(red: 0.25, green: 0.05, blue: 0.08, alpha: 0.2),
-                CGColor(gray: 0.8, alpha: 0.5)] as CFArray, locations: [0, 0.5, 1])!
-            context.drawLinearGradient(rim, start: CGPoint(x: inset, y: inset),
-                end: CGPoint(x: size.width - inset, y: size.height - inset), options: [])
-            context.restoreGState()
+            // A soft inward bevel, rather than a hard outline, matches the original glass tile.
+            glassEdge(context, path: shape, bounds: rect,
+                      depth: size.width * 0.007, blur: size.width * 0.008,
+                      highlight: CGColor(gray: 1, alpha: 0.72), shade: CGColor(gray: 0, alpha: 0.55))
+
         }
         let scale = min(size.width / 408, size.height / 434) * (tile ? 0.70 : 0.96)
         context.translateBy(x: (size.width - 408 * scale) / 2, y: (size.height - 434 * scale) / 2)
@@ -68,6 +69,18 @@ struct RenderBranding {
             context.drawLinearGradient(paint, start: start, end: end, options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
             context.restoreGState()
         }
+        if tile {
+            // Lift both pieces off the backing tile; even-odd fill preserves the Roblox opening.
+            context.saveGState()
+            context.setShadow(offset: CGSize(width: 3, height: -9), blur: 13,
+                              color: CGColor(red: 0.02, green: 0, blue: 0.01, alpha: 0.78))
+            context.setFillColor(CGColor(red: 0.3, green: 0.015, blue: 0.06, alpha: 1))
+            context.addPath(ForkLogoGeometry.bodyPath())
+            context.drawPath(using: .eoFill)
+            context.addPath(ForkLogoGeometry.leafPath())
+            context.fillPath()
+            context.restoreGState()
+        }
         fill(ForkLogoGeometry.bodyPath(), rule: .evenOdd, paint: gradient,
              start: CGPoint(x: 88.1429, y: 27.5218), end: CGPoint(x: 4.19202, y: 341.617))
         let blue = CGGradient(colorsSpace: space,
@@ -77,30 +90,22 @@ struct RenderBranding {
         fill(ForkLogoGeometry.leafPath(), paint: blue,
              start: CGPoint(x: 337, y: 0), end: CGPoint(x: 216, y: 82))
         if tile {
-            func bevel(_ path: CGPath, rule: CGPathFillRule = .winding, light: CGColor, dark: CGColor) {
-                context.saveGState()
-                context.addPath(path)
-                context.clip(using: rule)
-                // Layer narrow strokes for the soft molded edge of the inherited icon.
-                for thickness in stride(from: 14.0, through: 2.0, by: -2.0) {
-                    context.saveGState()
-                    context.addPath(path)
-                    context.setLineWidth(thickness)
-                    context.replacePathWithStrokedPath()
-                    context.clip()
-                    let edge = CGGradient(colorsSpace: space,
-                        colors: [light.copy(alpha: 0.12)!, dark.copy(alpha: 0.14)!] as CFArray, locations: [0, 1])!
-                    context.drawLinearGradient(edge, start: CGPoint(x: 0, y: 0), end: CGPoint(x: 180, y: 434),
-                        options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-                    context.restoreGState()
-                }
-                context.restoreGState()
-            }
-            bevel(ForkLogoGeometry.bodyPath(), rule: .evenOdd,
-                light: CGColor(red: 1, green: 0.38, blue: 0.52, alpha: 0.6),
-                dark: CGColor(red: 0.15, green: 0, blue: 0.04, alpha: 0.65))
-            bevel(ForkLogoGeometry.leafPath(), light: CGColor(red: 0.7, green: 0.92, blue: 1, alpha: 0.6),
-                dark: CGColor(red: 0, green: 0.15, blue: 0.4, alpha: 0.6))
+            let body = ForkLogoGeometry.bodyPath()
+            let leaf = ForkLogoGeometry.leafPath()
+            glassEdge(context, path: body, rule: .evenOdd, bounds: body.boundingBoxOfPath,
+                      depth: 5.4, blur: 4.8,
+                      highlight: CGColor(red: 1, green: 0.55, blue: 0.67, alpha: 0.85),
+                      shade: CGColor(red: 0.2, green: 0, blue: 0.045, alpha: 0.78))
+            glassEdge(context, path: leaf, bounds: leaf.boundingBoxOfPath,
+                      depth: 3.8, blur: 3.5,
+                      highlight: CGColor(red: 0.79, green: 0.96, blue: 1, alpha: 0.9),
+                      shade: CGColor(red: 0, green: 0.12, blue: 0.33, alpha: 0.65))
+            // Broad specular falloff makes the face read as glass, not just a stroked silhouette.
+            let sheen = CGGradient(colorsSpace: space,
+                colors: [CGColor(gray: 1, alpha: 0.12), CGColor(gray: 1, alpha: 0.015),
+                         CGColor(gray: 0, alpha: 0.12)] as CFArray, locations: [0, 0.42, 1])!
+            fill(body, rule: .evenOdd, paint: sheen, start: CGPoint(x: 100, y: 35), end: CGPoint(x: 260, y: 420))
+            fill(leaf, paint: sheen, start: CGPoint(x: 280, y: 0), end: CGPoint(x: 280, y: 90))
         }
         guard let image = context.makeImage(),
               let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else {
@@ -108,4 +113,28 @@ struct RenderBranding {
         }
         try png.write(to: url, options: .atomic)
     }
+    /// Shadows from the inverse silhouette form directional highlights inside the molded edge.
+    /// The same even-odd mask lights the outer contour, the bite and the square opening.
+    static func glassEdge(_ context: CGContext, path: CGPath, rule: CGPathFillRule = .winding,
+                          bounds: CGRect, depth: CGFloat, blur: CGFloat,
+                          highlight: CGColor, shade: CGColor) {
+        let inverse = CGMutablePath()
+        inverse.addRect(bounds.insetBy(dx: -100, dy: -100))
+        inverse.addPath(path)
+        for (offset, color, blend) in [
+            (CGSize(width: depth, height: -depth), highlight, CGBlendMode.screen),
+            (CGSize(width: -depth, height: depth), shade, CGBlendMode.multiply)
+        ] {
+            context.saveGState()
+            context.addPath(path)
+            context.clip(using: rule)
+            context.setBlendMode(blend)
+            context.setShadow(offset: offset, blur: blur, color: color)
+            context.addPath(inverse)
+            context.setFillColor(CGColor(gray: 0, alpha: 1))
+            context.drawPath(using: .eoFill)
+            context.restoreGState()
+        }
+    }
+
 }
