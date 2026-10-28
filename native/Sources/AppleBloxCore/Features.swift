@@ -106,12 +106,18 @@ public enum FeatureError: LocalizedError {
 public struct LaunchLink: Equatable, Sendable {
     public let url: URL
     public let placeID: String?
+    public var isLauncherOnly: Bool { url.scheme?.lowercased() == "appleblox-native" && url.host == "launch" }
     public init(_ url: URL) throws {
         guard url.absoluteString.utf8.count <= 32_768,
               let scheme = url.scheme?.lowercased(), ["roblox", "roblox-player", "appleblox-native"].contains(scheme) else {
             throw FeatureError.message("Use a Roblox launch link or an appleblox-native://play?placeId=… link.")
         }
         if scheme == "appleblox-native" {
+            guard url.user == nil, url.password == nil, url.port == nil, url.fragment == nil,
+                  url.path.isEmpty || url.path == "/" else { throw FeatureError.message("Invalid AppleBlox launch shortcut.") }
+            if url.host == "launch", url.query == nil {
+                self.url = url; placeID = nil; return
+            }
             guard url.host == "play", let parts = URLComponents(url: url, resolvingAgainstBaseURL: false),
                   let id = parts.queryItems?.first(where: { $0.name == "placeId" })?.value else {
                 throw FeatureError.message("This AppleBlox link is missing its place ID.")

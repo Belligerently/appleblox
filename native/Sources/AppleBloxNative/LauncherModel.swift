@@ -38,6 +38,7 @@ final class LauncherModel {
     var isWorkingFeature = false
     var featureStatus = ""
     var hasModBackup = false
+    var modPreviewRevision = 0
     var modLibraryScan: ModLibraryScan?
     var latestRelease: RobloxRelease?
     var updateStatus = "Check for the latest Roblox release."
@@ -73,6 +74,7 @@ final class LauncherModel {
     var nextGameDetailsAttempt = Date.distantPast
     var history: [PlaySession] = []
     var canSaveHistory = true
+    var isClearingHistory = false
     var historyRevision = 0
     var discordStatus = "Off"
     var maintenanceStatus = ""
@@ -236,7 +238,7 @@ final class LauncherModel {
         do {
             guard let installation else { throw InstallationError.missingInstallation }
             let verified = try RobloxInstallation.inspect(installation.url)
-            let requestedURL = try link?.url ?? shortcut?.validated().launchURL
+            let requestedURL = try link?.isLauncherOnly == true ? nil : (link?.url ?? shortcut?.validated().launchURL)
             let plan = try PlayerLaunchPlan(url: requestedURL, legacyResolution: configuration.features.legacyResolution,
                                             newInstance: configuration.features.newPlayerInstance, playerRunning: isRunning)
             startedDisplayHere = try fpsSession.prepare(enabled: configuration.features.experimentalFPSWorkaround, players: before)

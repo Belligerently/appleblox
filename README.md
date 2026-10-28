@@ -33,11 +33,11 @@ The app targets **macOS 14 or later**. Liquid Glass is used on macOS 26 and late
 | Recovery | Portable settings backup/restore with review and previous-settings recovery; reviewed reset archives native data and Player backups before scoped credential cleanup |
 | Troubleshooting | Bounded saved launcher events, separate launcher/Player log folders, fixed diagnostics and reviewed local support ZIP export |
 | Interface | Saved Dock-icon library with original styles and custom ICNS imports, Offline Native Guide, expanded About credits and support resources, compact navigation, Liquid Glass controls, System/Light/Dark themes, solid backgrounds, and reduced-motion support |
-| Engine settings | Quality/distance and voxel-shadow presets, experimental Vulkan and temporary-display FPS workaround, visual flag editing with search and bulk removal, validated JSON import/export, and backup/restore |
+| Engine settings | Quality/distance and voxel-shadow presets, experimental Vulkan and temporary-display FPS workaround, visual flag editing with rename, copy, bulk enable/disable and removal, validated JSON import/export, and backup/restore |
 | Content mods | Local packs with rescan/conflict reports, a mod guide, custom fonts, Roblox UI icon colors, Legacy Resolution launch mode, and resource restore |
 | Player updates | Roblox LIVE version checks and validated downloads with previous-app retention |
 | Accounts | Private website sign-in, explicit Player-login import, and Keychain-backed sessions |
-| Integrations | Discord presence with visibility controls, optional artwork, opt-in Bloxstrap SDK game control, local play history, optional server-region lookups and native alerts, and opt-in launch-link handling |
+| Integrations | Discord presence with visibility controls, optional artwork, opt-in Bloxstrap SDK game control, recoverable local history clearing, optional server-region lookups and native alerts, and opt-in launch-link handling |
 
 This is an ongoing migration. The online mod workshop, server-region picker, authenticated recent-game sync, exact-server rejoining, and some original appearance preferences remain to be ported. Authenticated account switching and live Discord display still need acceptance testing. Roblox may ignore individual engine flags or restrict multiple instances. Old lighting and general post-processing overrides are unavailable; the FPS display workaround is experimental and remains unverified on hardware.
 

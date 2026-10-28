@@ -38,6 +38,7 @@ struct ModsView: View {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(mod.name).font(.callout.weight(.medium))
                                 Text(mod.iconColorHex.map { "Roblox icon color · \($0)" } ?? (mod.fileCount == 1 ? "1 resource file" : "\(mod.fileCount) resource files")).font(.caption).foregroundStyle(.secondary)
+                                ModPreviewStrip(store: model.modStore, mod: mod, revision: model.modPreviewRevision)
                                 if let problem = model.modLibraryProblem(mod) {
                                     Label(problem, systemImage: "exclamationmark.triangle")
                                         .font(.caption).foregroundStyle(.red).lineLimit(2).help(problem)
@@ -252,9 +253,14 @@ struct IntegrationsView: View {
 
 struct HistoryView: View {
     let model: LauncherModel
+    @State private var confirmClear = false
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PageHeading(title: "Play History", subtitle: model.configuration.features.trackHistory ? "Recent games, stored locally on this Mac." : "Enable play history in Integrations to record new sessions.")
+            HStack {
+                PageHeading(title: "Play History", subtitle: model.configuration.features.trackHistory ? "Recent games, stored locally on this Mac." : "Enable play history in Integrations to record new sessions.")
+                Button("Clear…", systemImage: "trash") { confirmClear = true }
+                    .controlSize(.small).disabled(model.history.isEmpty || !model.canSaveHistory || model.isBusy)
+            }
             if model.history.isEmpty {
                 ContentUnavailableView("No recorded sessions", systemImage: "clock", description: Text("History starts with game joins observed after tracking is enabled. Existing Roblox logs are not imported."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -277,6 +283,11 @@ struct HistoryView: View {
                 .listStyle(.plain).scrollContentBackground(.hidden)
             }
         }
+        .confirmationDialog("Clear local play history?", isPresented: $confirmClear, titleVisibility: .visible) {
+            Button("Clear History") { Task { await model.clearPlayHistory() } }
+        } message: {
+            Text("Clears recorded sessions on this Mac and keeps a private recovery copy. Saved games and Roblox account history are unchanged. Close every Player first; future sessions can be recorded while tracking is enabled.")
+        }
     }
 }
 
@@ -285,6 +296,8 @@ struct UpdateControls: View {
     @State private var confirmInstall = false
     var body: some View {
         Section("Roblox Updates") {
+            Button("Export Launch Shortcut…", systemImage: "arrow.up.right.square") { Task { await model.exportLaunchShortcut() } }
+                .disabled(model.isBusy)
             Text(model.updateStatus).font(.callout).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Button("Check Latest") { Task { await model.checkForUpdates() } }

@@ -94,6 +94,7 @@ private struct SavedGameRow: View {
             Menu {
                 Button("Edit…", action: edit).disabled(!model.canSave)
                 Link("View on Roblox", destination: URL(string: "https://www.roblox.com/games/\(shortcut.placeID)")!)
+                Button("Export Launch Shortcut…") { Task { await model.exportLaunchShortcut(shortcut) } }.disabled(model.isBusy)
                 Button("Refresh Game Details") { refreshID += 1 }.disabled(!artwork)
                 Divider()
                 Button("Remove", role: .destructive) { model.removeShortcut(shortcut) }.disabled(!model.canSave)

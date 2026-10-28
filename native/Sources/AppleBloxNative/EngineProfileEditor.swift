@@ -17,6 +17,8 @@ struct EngineProfileEditor: View {
     @State private var query = ""
     @State private var selected: Set<UUID> = []
     @State private var showAdd = false
+    @State private var renameRow: FlagEditorRow?
+    @State private var copyStatus: String?
     @State private var message: String?
 
     init(model: LauncherModel, profile: EngineProfile) {
@@ -60,7 +62,14 @@ struct EngineProfileEditor: View {
         }
         // A stable sheet size keeps AppKit from clipping the header during section changes.
         .padding(20).frame(width: 640, height: 430)
+        .onChange(of: flags.rows) { copyStatus = nil }
         .onChange(of: flagsJSON) { message = nil }
+        .sheet(item: $renameRow) { row in
+            RenameFlagView(row: row, existing: Set(flags.rows.filter { $0.id != row.id }.map(\.name))) { name in
+                try flags.rename(row.id, to: name)
+                message = nil
+            }
+        }
         .sheet(isPresented: $showAdd) {
             AddFlagPicker(existing: Set(flags.rows.map(\.name))) { name in
                 do { try flags.add(name); query = ""; message = nil }
@@ -149,6 +158,11 @@ struct EngineProfileEditor: View {
                 )).disabled(visible.isEmpty)
                 Spacer()
                 Text("\(selected.count) selected").foregroundStyle(.secondary)
+                Menu("Selection") {
+                    Button("Enable Selected") { flags.setEnabled(true, for: selected) }
+                    Button("Disable Selected") { flags.setEnabled(false, for: selected) }
+                    Button("Copy Selected JSON") { copyFlags(selected) }
+                }.disabled(selected.isEmpty)
                 Button("Remove Selected", systemImage: "trash") {
                     flags.remove(selected); selected = []; message = nil
                 }.disabled(selected.isEmpty)
@@ -170,12 +184,12 @@ struct EngineProfileEditor: View {
                     ), selected: Binding(
                         get: { selected.contains(row.id) },
                         set: { if $0 { selected.insert(row.id) } else { selected.remove(row.id) } }
-                    ))
+                    ), copy: { copyFlags([row.id]) }, rename: { renameRow = row })
                 }
                 .listStyle(.plain).scrollContentBackground(.hidden)
             }
-            Text("\(flags.rows.filter(\.enabled).count) enabled · \(flags.rows.filter { !$0.enabled }.count) disabled. Selection is kept when filtering.")
-                .font(.caption).foregroundStyle(.secondary)
+            Text(copyStatus ?? "\(flags.rows.filter(\.enabled).count) enabled · \(flags.rows.filter { !$0.enabled }.count) disabled. Selection is kept when filtering.")
+                .lineLimit(2).font(.caption).foregroundStyle(.secondary)
         }
         .controlSize(.small)
     }
@@ -226,6 +240,17 @@ struct EngineProfileEditor: View {
         } catch { message = error.localizedDescription }
     }
 
+    private func copyFlags(_ ids: Set<UUID>) {
+        do {
+            let text = try flags.selectedJSON(ids)
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            guard pasteboard.setString(text, forType: .string) else { throw FeatureError.message("Couldn’t copy flags.") }
+            copyStatus = "Copied \(ids.count) flags as JSON, including selected disabled values. Saved enabled states are unchanged."
+            message = nil
+        } catch { message = error.localizedDescription }
+    }
+
     private func exportJSON() {
         do {
             var snapshot = flags
@@ -242,6 +267,8 @@ struct EngineProfileEditor: View {
 private struct FlagEditorRowView: View {
     @Binding var row: FlagEditorRow
     @Binding var selected: Bool
+    let copy: () -> Void
+    let rename: () -> Void
 
     private var valid: Bool { (try? row.validatedValue()) != nil }
 
@@ -266,6 +293,11 @@ private struct FlagEditorRowView: View {
             }
             Toggle("Enable \(row.name)", isOn: $row.enabled).labelsHidden().toggleStyle(.switch)
                 .help("Disabled custom overrides are saved but not applied.")
+            Menu {
+                Button("Copy JSON", systemImage: "doc.on.doc", action: copy)
+                Button("Rename…", systemImage: "pencil", action: rename)
+            } label: { Image(systemName: "ellipsis.circle") }
+            .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Actions for \(row.name)")
         }
         .padding(.vertical, 5)
     }
@@ -295,5 +327,36 @@ private struct AddFlagPicker: View {
             HStack { Spacer(); Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction) }
         }
         .padding(20).frame(width: 490, height: 380)
+    }
+}
+
+private struct RenameFlagView: View {
+    let row: FlagEditorRow
+    let existing: Set<String>
+    let rename: (String) throws -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @State private var failure: String?
+    init(row: FlagEditorRow, existing: Set<String>, rename: @escaping (String) throws -> Void) {
+        self.row = row; self.existing = existing; self.rename = rename
+        _name = State(initialValue: row.name)
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Rename Flag").font(.title2.bold())
+            Text("Keeps this row’s value, selection and enabled state. Choose another allowed name with a compatible value type.")
+                .font(.caption).foregroundStyle(.secondary)
+            Picker("Flag name", selection: $name) {
+                ForEach(FastFlags.allowed.sorted().filter { !existing.contains($0) }, id: \.self) { Text($0).tag($0) }
+            }
+            if let failure { Text(failure).font(.caption).foregroundStyle(.red) }
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Rename") {
+                    do { try rename(name); dismiss() } catch { failure = error.localizedDescription }
+                }.keyboardShortcut(.defaultAction)
+            }
+        }.padding(20).frame(width: 510)
     }
 }

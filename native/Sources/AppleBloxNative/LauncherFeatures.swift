@@ -147,6 +147,7 @@ extension LauncherModel {
             var next = configuration
             next.features.mods = report.mods
             try persist(next)
+            modPreviewRevision += 1
             modLibraryScan = report
             featureStatus = report.summary(for: next.features.mods)
             record(featureStatus)
@@ -481,7 +482,7 @@ extension LauncherModel {
     }
 
     private func saveHistorySnapshot() {
-        guard canSaveHistory, !isResetting else { return }
+        guard canSaveHistory, !isResetting, !isClearingHistory else { return }
         let snapshot = history
         historyRevision += 1
         let revision = historyRevision

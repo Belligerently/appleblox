@@ -1,6 +1,8 @@
 import CryptoKit
 import Foundation
 import CoreText
+import ImageIO
+import UniformTypeIdentifiers
 
 public actor ContentModStore {
     public let directory: URL
@@ -142,6 +144,45 @@ public actor ContentModStore {
             ModLibraryConflict(path: claim.path, modIDs: claim.indices.map { mods[$0].id }, names: claim.indices.map { mods[$0].name })
         }.sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
         return ModLibraryScan(mods: updated, issues: issues, overlaps: overlaps)
+    }
+
+    /// Registered local packs only; thumbnails never read Player resources or create disk caches.
+    public func visualSummary(_ mod: ContentMod) throws -> ModVisualSummary {
+        let root = try checkedPackageURL(mod)
+        let files = try modFiles(root)
+        var bytes: Int64 = 0
+        var previews: [ModThumbnail] = []
+        for path in files {
+            try Task.checkCancellation()
+            let url = root.appendingPathComponent(path)
+            try checkParents(of: url, inside: root)
+            let attributes = try fm.attributesOfItem(atPath: url.path)
+            guard attributes[.type] as? FileAttributeType == .typeRegular else { throw EngineError.unsafePath }
+            bytes += (attributes[.size] as? NSNumber)?.int64Value ?? 0
+            if previews.count < 3, ["png", "jpg", "jpeg", "webp", "bmp", "tga"].contains(url.pathExtension.lowercased()),
+               let image = try? Self.thumbnail(url) {
+                previews.append(ModThumbnail(path: path, png: image))
+            }
+        }
+        return ModVisualSummary(byteCount: bytes, fileCount: files.count, thumbnails: previews)
+    }
+    private static func thumbnail(_ url: URL) throws -> Data {
+        guard let bytes = try SupportFiles.readRegular(url, limit: 8_388_608),
+              let source = CGImageSourceCreateWithData(bytes as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
+              (1...32).contains(CGImageSourceGetCount(source)),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight] as? Int,
+              (1...16384).contains(width), (1...16384).contains(height), width * height <= 40_000_000,
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                  kCGImageSourceCreateThumbnailFromImageAlways: true,
+                  kCGImageSourceThumbnailMaxPixelSize: 192, kCGImageSourceShouldCacheImmediately: true
+              ] as CFDictionary) else { throw EngineError.unsafePath }
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(output, UTType.png.identifier as CFString, 1, nil) else { throw EngineError.unsafePath }
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else { throw EngineError.unsafePath }
+        return output as Data
     }
 
     public func hasBackup(_ installation: RobloxInstallation) -> Bool {
@@ -318,4 +359,15 @@ public actor ContentModStore {
         }
         try? fm.removeItem(at: previous)
     }
+}
+
+public struct ModThumbnail: Identifiable, Sendable {
+    public var id: String { path }
+    public let path: String
+    public let png: Data
+}
+public struct ModVisualSummary: Sendable {
+    public let byteCount: Int64
+    public let fileCount: Int
+    public let thumbnails: [ModThumbnail]
 }

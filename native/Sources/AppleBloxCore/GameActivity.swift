@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 public struct PlaySession: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
@@ -83,17 +84,49 @@ public actor PlayerLogReader {
 public actor PlayHistoryStore {
     let file: URL
     private var newestRevision = -1
-    public init(directory: URL) { file = directory.appendingPathComponent("play-history.json") }
+    public init(directory: URL) { file = SupportFiles.canonicalBase(directory).appendingPathComponent("play-history.json") }
     public func load() throws -> [PlaySession] {
-        guard FileManager.default.fileExists(atPath: file.path) else { return [] }
-        return try JSONDecoder().decode([PlaySession].self, from: Data(contentsOf: file))
+        try SupportFiles.validateAncestors(file.deletingLastPathComponent())
+        guard let bytes = try SupportFiles.readRegular(file, limit: 8_388_608) else { return [] }
+        return try JSONDecoder().decode([PlaySession].self, from: bytes)
     }
     public func save(_ history: [PlaySession], revision: Int? = nil) throws {
         if let revision, revision <= newestRevision { return }
-        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try JSONEncoder().encode(Array(history.prefix(200))).write(to: file, options: .atomic)
+        try SupportFiles.prepareDirectory(file.deletingLastPathComponent())
+        let original = try SupportFiles.readRegular(file, limit: 8_388_608)
+        try write(JSONEncoder().encode(Array(history.prefix(200))), expected: original)
         if let revision { newestRevision = revision }
     }
+    /// Called after pending writes drain. Revision barriers prevent older queued saves resurrecting history.
+    public func clear(revision: Int) throws -> URL? {
+        guard revision > newestRevision else { throw FeatureError.message("History changed. Review clearing again.") }
+        try SupportFiles.prepareDirectory(file.deletingLastPathComponent())
+        let original = try SupportFiles.readRegular(file, limit: 8_388_608)
+        var recovery: URL?
+        if let original {
+            _ = try JSONDecoder().decode([PlaySession].self, from: original)
+            let folder = file.deletingLastPathComponent().appendingPathComponent("history-recovery", isDirectory: true)
+            try SupportFiles.prepareDirectory(folder)
+            let saved = folder.appendingPathComponent("history-\(UUID()).json")
+            try SupportFiles.writePrivate(original, to: saved)
+            recovery = saved
+        }
+        try write(Data("[]".utf8), expected: original)
+        newestRevision = revision
+        return recovery
+    }
+    private func write(_ bytes: Data, expected: Data?) throws {
+        guard bytes.count <= 8_388_608 else { throw FeatureError.message("History exceeds its size limit.") }
+        try SupportFiles.prepareDirectory(file.deletingLastPathComponent())
+        guard try SupportFiles.readRegular(file, limit: 8_388_608) == expected else { throw FeatureError.message("History changed outside AppleBlox. Existing files were preserved.") }
+        let stage = file.deletingLastPathComponent().appendingPathComponent(".history-\(UUID()).tmp")
+        defer { try? FileManager.default.removeItem(at: stage) }
+        try SupportFiles.writePrivate(bytes, to: stage)
+        guard try SupportFiles.readRegular(file, limit: 8_388_608) == expected else { throw FeatureError.message("History changed outside AppleBlox. Existing files were preserved.") }
+        if expected == nil { try FileManager.default.linkItem(at: stage, to: file) }
+        else if Darwin.rename(stage.path, file.path) != 0 { throw FeatureError.message("Couldn’t save history.") }
+    }
+
 }
 
 public enum RobloxGameDirectory {

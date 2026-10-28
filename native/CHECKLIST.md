@@ -37,10 +37,10 @@ A checked implementation item means native code exists, not that every real-game
 - [x] Final source-to-native route and nested-menu inventory; findings reconciled below. This closes the audit task, not the newly identified features.
 - [ ] Authenticated Roblox recent-game sync and manual refresh/merge with local history.
 - [ ] Recorded server/job history, exact-server rejoin and last-server quick rejoin; distinct from Play Again.
-- [ ] Reviewed local play-history clearing.
-- [ ] Export a desktop launch shortcut through the native launch pipeline.
-- [ ] Flag row rename/copy, selected-row clipboard export and bulk enable/disable.
-- [ ] Local mod image previews and byte-size summaries, matching original mod cards.
+- [x] Reviewed local play-history clearing with a private recovery copy, drained writers and a revision barrier against stale saves.
+- [x] Desktop .webloc launch shortcut export (general launch or saved game), through native link confirmation and the existing launch pipeline; never overwrites existing files.
+- [x] Flag row rename/copy, selected-row JSON clipboard export (including disabled values) and bulk enable/disable; draft-only until Save.
+- [x] Local mod image previews (up to three bounded thumbnails) and byte-size/file summaries; scan/reload refreshes edited pack details.
 - [ ] Decide first-run onboarding versus the existing guide and opt-in pages.
 - [ ] Explicitly accept or implement the remaining source differences: manual cookie entry, whole-disk discovery, force-kill/binary instance patching, developer-only harness, and arbitrary CSS styling.
 - [ ] Decide exact-server Discord join support; the current game button opens the experience page.
