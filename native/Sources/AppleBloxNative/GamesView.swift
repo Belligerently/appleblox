@@ -108,6 +108,7 @@ private struct SavedGameRow: View {
 }
 
 struct GameArtwork: View {
+    @Environment(\.nativePalette) private var palette
     let url: URL?
     var size: CGFloat = 48
 
@@ -117,8 +118,8 @@ struct GameArtwork: View {
                 image.resizable().scaledToFill()
             } else {
                 ZStack {
-                    AppleBloxTheme.primary.opacity(0.12)
-                    Image(systemName: "gamecontroller.fill").font(.system(size: size * 0.4)).foregroundStyle(AppleBloxTheme.primary)
+                    palette.accent.opacity(0.12)
+                    Image(systemName: "gamecontroller.fill").font(.system(size: size * 0.4)).foregroundStyle(palette.accent)
                 }
             }
         }

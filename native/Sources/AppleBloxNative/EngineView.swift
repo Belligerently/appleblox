@@ -9,6 +9,7 @@ private struct EngineDraft: Identifiable {
 }
 
 struct EngineView: View {
+    @Environment(\.nativePalette) private var palette
     let model: LauncherModel
     @State private var draft: EngineDraft?
     @State private var confirmRestore = false
@@ -66,7 +67,7 @@ struct EngineView: View {
                             }
                         }
                         .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(AppleBloxTheme.card(for: colorScheme).opacity(0.75), in: .rect(cornerRadius: 14))
+                        .background(palette.card(colorScheme).opacity(0.75), in: .rect(cornerRadius: 14))
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Toggle("Experimental FPS workaround (240 Hz)", isOn: Binding(

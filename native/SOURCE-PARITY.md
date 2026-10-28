@@ -11,7 +11,7 @@ Sources: [Appearance.svelte](../legacy/frontend/src/windows/main/pages/Appearanc
 | Original feature | Native status | Exact difference / remaining work |
 | --- | --- | --- |
 | Launcher app-icon library: built-in/original icons, previews, custom `.icns` upload, apply confirmation, delete and original-icon recovery | Partial / adaptation | Appearance → Manage Launcher Icons provides the Native default, six inherited styles, ICNS imports, previews, confirmed application, persisted Dock selection, recoverable removal and default restoration. Finder customization remains unimplemented: the macOS custom-file-icon call stalled in isolated QA and is excluded from this build. Bundled resources are never replaced. Applied icons must be changed before removal; removed copies remain in launcher-icons/removed. |
-| Custom theme CSS: edit/save, reveal CSS file, reload | Partial / adaptation | Native has System/Light/Dark themes, the fork palette, reduced animation, solid backgrounds and appearance reset. Arbitrary theme editing/import/export is absent; legacy CSS cannot directly style SwiftUI views. A native theme format would be a separate design decision. |
+| Custom theme CSS: edit/save, reveal CSS file, reload | Implemented / native adaptation | Appearance → Manage Custom Themes supports versioned native JSON palettes, create/edit, light/dark previews, apply, reload-and-apply, import/export, file/folder reveal, recoverable removal and original-palette recovery. Accent plus light/dark backgrounds/cards are supported with baseline contrast validation. Applied palettes are copied into settings and survive a missing library file. Arbitrary CSS, layout rules and bootstrapper XML are not interpreted. |
 | Bloxstrap/Fishstrap bootstrapper themes: XML/ZIP import with assets, preview library, activate, rename, delete, reveal, refresh | Not ported | Native has no themed bootstrapper renderer or theme-library workflow. This includes both the import/library UI and the launch-screen rendering implementation, not just reading XML. |
 
 ## Misc / System
@@ -29,7 +29,7 @@ Source: [Misc.svelte](../legacy/frontend/src/windows/main/pages/Misc.svelte). Na
 | Documentation button | Implemented / adaptation | About and Diagnostics open an offline Native Guide covering launch, profiles, mods, accounts, privacy, updates, restore/troubleshooting and experimental features. It is native content included with the executable, not the legacy documentation site. Source/support links are also available. |
 | AppleBlox Folder | Implemented / adaptation | Diagnostics → Open Native Data Folder opens the separate AppleBlox Native data directory. It correctly does not open or reuse legacy app data. |
 | Roblox Folder (opens selected app's `Contents`) | Implemented | Installation → Open Contents and Diagnostics → Open Player Contents open the selected bundle’s validated folder. The shortcut rechecks Player and rejects symlinked/redirected Contents or a stale bundle before handing it to Finder. |
-| Reset AppleBlox: remove saved credentials, settings, mods, cache and app data, then quit; warning and typed confirmation | Not ported | Reset Appearance and cache cleanup are scoped operations, not a full reset. A native reset must account for Keychain entries and backups of applied Player changes so originals remain recoverable. No reset/deletion was performed in this audit. |
+| Reset AppleBlox: remove saved credentials, settings, mods, cache and app data, then quit; warning and typed confirmation | Implemented / recoverable adaptation | Diagnostics → Reset AppleBlox Native reviews counts, folders and the recovery location, then requires RESET. Every Player must be closed and an original Player login restored beforehand. Background writers drain; all native data is moved to a private sibling recovery folder before the launcher credential namespace is cleared and the app quits. Player files/login are unchanged; engine/mod backups remain recoverable. Stale reviews, unknown files, unsafe roots and unreadable settings block reset. Failed credential cleanup attempts data rollback; if an external folder prevents rollback, the archive is preserved and writes remain gated. |
 
 ## Info / About
 
@@ -48,16 +48,16 @@ The audit is complete; implementation of the missing items is not. These entries
 - [x] Audit original Appearance, Misc and Info controls and their nested components.
 - [x] Dock-icon library: bundled/original previews, custom ICNS import, saved selection, confirmed apply, recoverable removal and default recovery.
 - [ ] Finder app-icon customization; the native system call stalled in isolated QA and is not shipped.
-- [ ] Decide/design portable native custom themes; legacy CSS editing remains unported.
+- [x] Portable native color themes with editing, preview, import/export, reload/reveal and default recovery; legacy CSS remains a different format.
 - [ ] Bootstrapper theme library and renderer, including XML/ZIP assets and library actions.
 - [ ] Decide whether to retain fixed-duration bootstrapper steps.
 - [x] Persistent native launcher logs and a launcher-log folder action.
 - [x] Reviewed debug/support-bundle export; full settings backup remains separate and unimplemented.
-- [ ] Full native reset with recoverable handling of Player backups and saved credentials.
+- [x] Reviewed native reset with recoverable Player backups, scoped credential cleanup and typed confirmation.
 - [x] Dedicated offline fork documentation and direct validated Player `Contents` shortcuts.
 - [x] Expanded native About credits/inspirations and community/support access.
 - [ ] Decide whether an alternative notification backend is useful after native delivery acceptance.
 
 Already tracked elsewhere: online Workshop, server-region selection, background updates while the launcher is closed, and native self-updating. Actual notifications, Discord, FPS/display restoration, simultaneous Players, authenticated accounts and in-game rendering remain acceptance work, not findings that this documentation audit verifies.
 
-Completed clusters: saved Dock-icon library (Finder changes remain pending); About credits/community, offline documentation and folder shortcuts; persistent bounded event logs and reviewed local support ZIP export. Bootstrapper themes, full settings backup and full reset need their own implementation and validation work.
+Completed clusters: saved Dock-icon library (Finder changes remain pending); About credits/community, offline documentation and folder shortcuts; persistent bounded event logs and reviewed local support ZIP export. Native palette themes and recoverable reset are also implemented. Bootstrapper themes and a dedicated full settings-backup workflow remain separate work.

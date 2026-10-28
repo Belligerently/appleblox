@@ -55,6 +55,7 @@ public struct NativeConfiguration: Codable, Equatable, Sendable {
     public func validated() throws -> NativeConfiguration {
         guard version == 1 else { throw ConfigurationError.unsupportedVersion }
         var result = self
+        result.appearance.customTheme = try appearance.customTheme?.validated()
         result.engine = try engine.validated()
         result.features = try features.validated()
         result.shortcuts = try shortcuts.map { try $0.validated() }

@@ -18,7 +18,7 @@ struct AppleBloxApp: App {
             ContentView(model: model)
                 .onAppear { [model] in appDelegate.prepareToQuit = { [weak model] in model?.stopFPSWorkaround() ?? true } }
                 .modifier(AppAppearance(settings: model.configuration.appearance))
-                .tint(AppleBloxTheme.primary)
+                .tint(NativePalette(document: model.configuration.appearance.customTheme).accent)
         }
         .defaultSize(width: 660, height: 460)
         .defaultPosition(.center)

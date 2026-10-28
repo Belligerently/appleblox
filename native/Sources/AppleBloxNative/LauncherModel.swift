@@ -26,7 +26,7 @@ final class LauncherModel {
     let clientSettings: ClientSettingsStore
     let modStore: ContentModStore
     let updateService = RobloxUpdateService()
-    let accountVault = AccountVault()
+    let accountVault: AccountVault
     let logReader = PlayerLogReader()
     let discord = DiscordPresenceClient()
     let historyStore: PlayHistoryStore
@@ -72,6 +72,14 @@ final class LauncherModel {
     var historyRevision = 0
     var discordStatus = "Off"
     var maintenanceStatus = ""
+    var isResetting = false
+    var resetReview: NativeResetPlan?
+    var resetCompleted = false
+    var servicesTask: Task<Void, Never>?
+    var servicesTaskID: UUID?
+    var historyWriteTask: Task<Void, Never>?
+    let resetService: NativeResetService
+    let nativeThemes: NativeThemeStore
     let launcherIconLibrary: LauncherIconLibrary
     var launcherIconPreviews: [LauncherIconPreview] = []
     var selectedLauncherIcon: LauncherIconChoice? = .default
@@ -86,9 +94,12 @@ final class LauncherModel {
     var isQuittingAfterPlayer = false
     var legacyImportReview: LegacyProfileImportPlan?
     var pendingLink: LaunchLink?
-    var isBusy: Bool { isLaunching || isApplyingEngine || isWorkingFeature }
+    var isBusy: Bool { isResetting || isLaunching || isApplyingEngine || isWorkingFeature }
 
     init(directory: URL = ConfigurationStore.defaultDirectory()) {
+        accountVault = AccountVault(service: AccountVault.service(for: directory))
+        resetService = NativeResetService(dataDirectory: directory)
+        nativeThemes = NativeThemeStore(dataDirectory: directory)
         launcherIconLibrary = LauncherIconLibrary(dataDirectory: directory,
             resources: Bundle.main.resourceURL ?? directory.appendingPathComponent("missing-resources"))
         launcherLogs = LauncherLogStore(dataDirectory: directory)
@@ -388,7 +399,7 @@ final class LauncherModel {
     }
 
     func persist(_ next: NativeConfiguration) throws {
-        guard canSave else {
+        guard canSave, !isResetting else {
             throw CocoaError(.fileReadCorruptFile, userInfo: [NSLocalizedDescriptionKey: "Settings are unreadable. Move native-settings.json out of the data folder and restart to create fresh settings."])
         }
         try store.save(next)
@@ -404,7 +415,7 @@ final class LauncherModel {
     func record(_ message: String, event: LauncherLogEvent = .activity, count: Int? = nil, failure: SafeLogFailure? = nil) {
         activity.insert(ActivityEntry(message: message), at: 0)
         if activity.count > 100 { activity.removeLast(activity.count - 100) }
-        guard canWriteLauncherLogs else { return }
+        guard canWriteLauncherLogs, !isResetting else { return }
         // Preserve UI event order across asynchronous actor writes. Never persist `message`.
         let previous = launcherLogTask
         let writeID = UUID()

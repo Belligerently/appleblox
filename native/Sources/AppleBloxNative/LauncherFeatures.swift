@@ -481,14 +481,26 @@ extension LauncherModel {
     }
 
     private func saveHistorySnapshot() {
-        guard canSaveHistory else { return }
+        guard canSaveHistory, !isResetting else { return }
         let snapshot = history
         historyRevision += 1
         let revision = historyRevision
-        Task {
+        let priorWrite = historyWriteTask
+        historyWriteTask = Task {
+            await priorWrite?.value
             do { try await historyStore.save(snapshot, revision: revision) }
             catch { canSaveHistory = false; record("History couldn’t be saved; its existing file was preserved.") }
         }
+    }
+
+    func startServices() async {
+        guard servicesTask == nil, !isResetting else { return }
+        let id = UUID()
+        let task = Task { await runServices() }
+        servicesTaskID = id
+        servicesTask = task
+        await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
+        if servicesTaskID == id { servicesTask = nil; servicesTaskID = nil }
     }
 
     func runServices() async {
@@ -496,7 +508,7 @@ extension LauncherModel {
         do { history = try await historyStore.load() }
         catch { canSaveHistory = false; record("History file is unreadable and has been preserved.") }
         var lastUpdateCheck = Date.distantPast
-        while !Task.isCancelled {
+        while !Task.isCancelled, !isResetting {
             updateRunningStatus()
             if (configuration.features.checkUpdatesOnOpen || configuration.features.automaticUpdates), !isBusy, Date().timeIntervalSince(lastUpdateCheck) > 3600 {
                 lastUpdateCheck = Date()

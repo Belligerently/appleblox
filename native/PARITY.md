@@ -75,6 +75,9 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 
 ## Native maintenance (outside the screenshot audit)
 
+- [x] Native custom-theme library: versioned JSON, create/edit, light/dark previews, accent and surface colors, apply, reload, import/export, reveal, recoverable removal and original-palette recovery. Legacy CSS/XML are not accepted.
+- [x] Reviewed recoverable reset: typed RESET, all Players closed, original login restored first, drained writers, private native-data archive, scoped Keychain cleanup and quit. Player files remain unchanged; native backups stay in recovery. Real authenticated-account cleanup and Player-backup restoration remain live acceptance work.
+
 - [x] Saved Dock-icon library: Native default plus six original AppleBlox styles, local previews, bounded ICNS imports, apply confirmation, recoverable removal, default restoration, and automatic Dock restoration on launch.
 - [ ] Finder icon customization. A live system-call stall was reproduced in isolated QA; the final implementation does not call that API or replace bundled icon resources.
 
@@ -92,6 +95,9 @@ Mods → ••• offers Rescan Library, Scan Results, and a local Mod Guide. E
 - [x] Appearance-only reset already exists under More → Appearance.
 
 ## Acceptance checks
+
+- [x] Isolated native-theme UI: library loads, existing palette applies, light/dark editor previews fit, unreadable accent is rejected, valid theme saves, and original palette recovers. Core tests cover strict native JSON, import limits, local reload/edit, duplicate names, linked/corrupt files, recoverable removal, migration and support-summary exclusion.
+- [x] Isolated reset UI: reviewed counts/folders/recovery path, exact RESET gate, archive plus recovery instructions opening in Finder, dismissal before automatic quit, and a fresh relaunch. Archived fixture backup and both saved themes were verified intact; archive permissions are private. Tests use fake credential cleanup; UI used a new isolated namespace with zero accounts. No real login, Player resources, Discord session or display mode was changed.
 
 - [x] Isolated Dock-icon UI: seven bundled previews, apply confirmation, successful persisted original-style selection, default recovery, responsive dismissal and ordinary quit. Signed resources still verify after these actions. 12 new tests cover imports, duplicate names, invalid/oversized/linked assets, actual bundled image decoding, selection persistence, failure/rollback, corruption recovery, recoverable removal, concurrent mutation and library limits.
 - [x] Default app icon refreshed to the original AppleBlox dark burgundy tile/bevel style while retaining the fork’s red-body/blue-leaf logo.

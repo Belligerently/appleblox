@@ -89,6 +89,7 @@ struct ModsView: View {
 }
 
 struct AccountsView: View {
+    @Environment(\.nativePalette) private var palette
     let model: LauncherModel
     @State private var showLogin = false
     @State private var removal: RobloxAccount?
@@ -117,7 +118,7 @@ struct AccountsView: View {
                             Text("@\(account.name)").font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        if account.id == model.configuration.features.selectedAccountID { Image(systemName: "checkmark.circle.fill").foregroundStyle(AppleBloxTheme.primary) }
+                        if account.id == model.configuration.features.selectedAccountID { Image(systemName: "checkmark.circle.fill").foregroundStyle(palette.accent) }
                         Button("Remove…") { removal = account }.controlSize(.small)
                             .disabled(model.isBusy || !model.canSave)
                     }

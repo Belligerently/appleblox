@@ -68,7 +68,7 @@ struct ContentView: View {
         .background { LauncherBackdrop() }
         .nativeWindowMaterial()
         .frame(minWidth: 580, minHeight: 390)
-        .task { await model.runServices() }
+        .task { await model.startServices() }
         .onOpenURL { model.receiveLaunchURL($0) }
         .onReceive(Publishers.Merge(
             NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification),
@@ -111,6 +111,7 @@ struct ContentView: View {
 }
 
 private struct NavigationTabs: View {
+    @Environment(\.nativePalette) private var palette
     @Binding var selection: Destination
     @Namespace private var selectionAnimation
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
@@ -128,12 +129,12 @@ private struct NavigationTabs: View {
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(selection == item ? AppleBloxTheme.selectedText(for: colorScheme) : Color.secondary)
+                .foregroundStyle(selection == item ? palette.selectedText(colorScheme) : Color.secondary)
                 .background {
                     if selection == item {
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(AppleBloxTheme.primary.opacity(colorScheme == .dark ? 0.32 : 0.14))
-                            .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(AppleBloxTheme.primary.opacity(0.24)) }
+                            .fill(palette.accent.opacity(colorScheme == .dark ? 0.32 : 0.14))
+                            .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(palette.accent.opacity(0.24)) }
                             .matchedGeometryEffect(id: "selected-tab", in: selectionAnimation)
                     }
                 }
@@ -152,7 +153,7 @@ private struct NavigationTabs: View {
             .padding(.horizontal, 6)
             .background {
                 if !Destination.primaryCases.contains(selection) {
-                    RoundedRectangle(cornerRadius: 10).fill(AppleBloxTheme.primary.opacity(colorScheme == .dark ? 0.32 : 0.14))
+                    RoundedRectangle(cornerRadius: 10).fill(palette.accent.opacity(colorScheme == .dark ? 0.32 : 0.14))
                         .matchedGeometryEffect(id: "selected-tab", in: selectionAnimation)
                 }
             }
@@ -164,13 +165,14 @@ private struct NavigationTabs: View {
 }
 
 struct LauncherBackdrop: View {
+    @Environment(\.nativePalette) private var palette
     @Environment(\.accessibilityReduceTransparency) private var systemReduceTransparency
     @Environment(\.appReduceTransparency) private var appReduceTransparency
     private var reduceTransparency: Bool { systemReduceTransparency || appReduceTransparency }
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        AppleBloxTheme.background(for: colorScheme)
+        palette.background(colorScheme)
             .opacity(reduceTransparency ? 1 : 0.88)
             .ignoresSafeArea().allowsHitTesting(false)
     }
@@ -211,7 +213,7 @@ extension View {
 
     @ViewBuilder func launchButtonStyle() -> some View {
         if #available(macOS 26, *) {
-            buttonStyle(.glassProminent).buttonBorderShape(.capsule).tint(AppleBloxTheme.primary)
+            buttonStyle(.glassProminent).buttonBorderShape(.capsule)
         }
         else { buttonStyle(.borderedProminent) }
     }
@@ -231,6 +233,7 @@ struct PageHeading: View {
 }
 
 struct LauncherView: View {
+    @Environment(\.nativePalette) private var palette
     let model: LauncherModel
     let showGames: () -> Void
     @Environment(\.colorScheme) private var colorScheme
@@ -246,7 +249,7 @@ struct LauncherView: View {
                     AppleBloxForkLogo()
                         .frame(width: 38, height: 41)
                         .frame(width: 56, height: 56)
-                        .background(AppleBloxTheme.primary.opacity(0.1), in: .rect(cornerRadius: 16)).accessibilityHidden(true)
+                        .background(palette.accent.opacity(0.1), in: .rect(cornerRadius: 16)).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Roblox Player").font(.title2.weight(.semibold))
                         Label(model.status, systemImage: model.installation == nil ? "exclamationmark.circle" : "checkmark.circle.fill")
@@ -258,7 +261,7 @@ struct LauncherView: View {
                     }
                 }
                 .padding(18).frame(maxWidth: .infinity, alignment: .leading)
-                .background(AppleBloxTheme.card(for: colorScheme).opacity(0.75), in: .rect(cornerRadius: 20))
+                .background(palette.card(colorScheme).opacity(0.75), in: .rect(cornerRadius: 20))
                 .overlay { RoundedRectangle(cornerRadius: 20).strokeBorder(.primary.opacity(0.06)) }
                 HStack(spacing: 10) {
                     Button {
@@ -304,14 +307,14 @@ struct LauncherView: View {
                 if model.configuration.shortcuts.isEmpty {
                     Button(action: showGames) {
                         HStack(spacing: 10) {
-                            Image(systemName: "plus.circle").foregroundStyle(AppleBloxTheme.primary)
+                            Image(systemName: "plus.circle").foregroundStyle(palette.accent)
                             Text("Add your favorite games").font(.callout)
                             Spacer()
                             Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
                         }
                         .padding(14).contentShape(.rect)
                     }
-                    .buttonStyle(.plain).background(AppleBloxTheme.card(for: colorScheme).opacity(0.75), in: .rect(cornerRadius: 14))
+                    .buttonStyle(.plain).background(palette.card(colorScheme).opacity(0.75), in: .rect(cornerRadius: 14))
                 } else {
                     VStack(spacing: 0) {
                         ForEach(model.configuration.shortcuts.prefix(3)) { shortcut in
@@ -327,7 +330,7 @@ struct LauncherView: View {
                             .padding(.horizontal, 14).padding(.vertical, 9)
                         }
                     }
-                    .background(AppleBloxTheme.card(for: colorScheme).opacity(0.75), in: .rect(cornerRadius: 14))
+                    .background(palette.card(colorScheme).opacity(0.75), in: .rect(cornerRadius: 14))
                 }
             }
         }
@@ -385,6 +388,8 @@ struct DiagnosticsView: View {
                         .disabled(model.isBusy)
                     Button("Open Launcher Logs", systemImage: "folder") { Task { await model.openLauncherLogs() } }
                     Button("Copy Diagnostics", systemImage: "doc.on.doc") { Task { await model.copyDiagnostics() } }
+                    Button("Reset AppleBlox Native…", systemImage: "arrow.counterclockwise") { Task { await model.prepareNativeReset() } }
+                        .disabled(model.isBusy || !model.canSave)
                     Button("Clear Game Details Cache…", systemImage: "arrow.clockwise") { confirmClearCache = true }
                         .disabled(model.isBusy)
                     Divider()
@@ -409,6 +414,9 @@ struct DiagnosticsView: View {
         .sheet(isPresented: $showNativeGuide) { NativeGuideView() }
         .sheet(item: Binding(get: { model.supportBundleReview }, set: { model.supportBundleReview = $0 })) { draft in
             SupportBundleReviewView(model: model, draft: draft)
+        }
+        .sheet(item: Binding(get: { model.resetReview }, set: { model.resetReview = $0 }), onDismiss: { model.finishNativeReset() }) { review in
+            NativeResetReviewView(model: model, review: review)
         }
         .confirmationDialog("Clear saved game details?", isPresented: $confirmClearCache, titleVisibility: .visible) {
             Button("Clear Game Details Cache") { Task { await model.clearGameDetailsCache() } }

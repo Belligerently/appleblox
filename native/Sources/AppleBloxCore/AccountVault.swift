@@ -1,6 +1,7 @@
 import Darwin
 import Foundation
 import Security
+import CryptoKit
 
 private final class RobloxRedirectPolicy: NSObject, URLSessionTaskDelegate, Sendable {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
@@ -11,10 +12,25 @@ private final class RobloxRedirectPolicy: NSObject, URLSessionTaskDelegate, Send
 }
 
 public actor AccountVault {
-    private let service = "io.github.Belligerently.AppleBloxNative.sessions"
+    private let service: String
+    public static func service(for directory: URL) -> String {
+        let standard = SupportFiles.canonicalBase(ConfigurationStore.defaultDirectory(environment: [:]))
+        let actual = SupportFiles.canonicalBase(directory)
+        let base = "io.github.Belligerently.AppleBloxNative.sessions"
+        if actual == standard { return base }
+        return base + ".isolated." + SHA256.hash(data: Data(actual.path.utf8)).prefix(12).map { String(format: "%02x", $0) }.joined()
+    }
     public let cookieFile: URL
-    public init(cookieFile: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/HTTPStorages/com.roblox.RobloxPlayer.binarycookies")) { self.cookieFile = cookieFile }
+    public init(cookieFile: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/HTTPStorages/com.roblox.RobloxPlayer.binarycookies"), service: String = "io.github.Belligerently.AppleBloxNative.sessions") { self.cookieFile = cookieFile; self.service = service }
     private struct OriginalLogin: Codable { let original: Data? }
+
+    /// Reset only this launcher's credential namespace; never discard an unrestored original login.
+    public func clearForReset() throws {
+        guard try !hasOriginalLogin() else { throw FeatureError.message("Restore the original Player login in Accounts before resetting AppleBlox.") }
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service]
+        let result = SecItemDelete(query as CFDictionary)
+        guard result == errSecSuccess || result == errSecItemNotFound else { throw keychainError(result) }
+    }
 
     public func identify(session: String) async throws -> RobloxAccount {
         _ = try PlayerCookies.encode(session: session)

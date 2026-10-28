@@ -5,6 +5,7 @@ import SwiftUI
 struct AppearanceView: View {
     let model: LauncherModel
     @State private var showIconLibrary = false
+    @State private var showThemes = false
 
     var body: some View {
         Form {
@@ -14,7 +15,7 @@ struct AppearanceView: View {
                 }
                 Toggle("Reduce animations", isOn: preference(\.reduceMotion))
                 Toggle("Use solid backgrounds", isOn: preference(\.reduceTransparency))
-                Text("System accessibility preferences are always respected. The original AppleBlox rose palette is used in every theme.")
+                Text("System accessibility preferences are always respected. Custom palettes can change accent and surface colors.")
                     .font(.caption).foregroundStyle(.secondary)
             } header: { Text("Appearance") }
             Section {
@@ -22,6 +23,11 @@ struct AppearanceView: View {
                 Text("Loads public game details and icons from Roblox in My Games. You can still look up names when artwork is off.")
                     .font(.caption).foregroundStyle(.secondary)
             } header: { Text("My Games") }
+            Section {
+                Button("Manage Custom Themes…", systemImage: "paintpalette") { showThemes = true }
+                Text(model.configuration.appearance.customTheme.map { "Custom palette: \($0.name)" } ?? "Using the original AppleBlox palette.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } header: { Text("Custom Themes") }
             Section {
                 Button("Manage Launcher Icons…", systemImage: "app.badge") { showIconLibrary = true }
                 Text("Preview original AppleBlox styles or import an ICNS icon. Applying changes this launcher’s Dock icon. Finder customization is not available.")
@@ -34,6 +40,7 @@ struct AppearanceView: View {
         .formStyle(.grouped).scrollContentBackground(.hidden).controlSize(.small)
         .contentMargins(.horizontal, 0, for: .scrollContent)
         .disabled(!model.canSave)
+        .sheet(isPresented: $showThemes) { NativeThemeLibraryView(model: model) }
         .sheet(isPresented: $showIconLibrary) { LauncherIconLibraryView(model: model) }
     }
 
@@ -59,6 +66,7 @@ struct AppAppearance: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .environment(\.nativePalette, NativePalette(document: settings.customTheme))
             .environment(\.appReduceMotion, settings.reduceMotion)
             .environment(\.appReduceTransparency, settings.reduceTransparency)
             .onChange(of: settings.theme, initial: true) { _, theme in
