@@ -61,7 +61,7 @@ Unavailable or deliberately replaced behavior must remain documented. It only le
 - [ ] Authenticated account import/switch/original-login recovery and reset cleanup using a dedicated test account; verify unrelated credentials remain intact.
 - [ ] Real Discord presence, SDK artwork/text/timers, privacy controls, reconnects, leave/rejoin and ambiguous multi-Player behavior.
 - [ ] Actual server-log/provider behavior and macOS notification grant/denial, foreground/background delivery, sound, Focus and teleport suppression.
-- [ ] Real FPS/display behavior, supported hardware checks, launch failures, normal quit and display restoration/hotplug cases. A 240 Hz virtual mode is not a guarantee of 240 FPS.
+- [ ] Real FPS/display behavior, supported hardware checks, launch failures, normal quit and display restoration/hotplug cases. A 240 Hz virtual mode is not a guarantee of 240 FPS. Initial M2 testing exposed and fixed Retina sizing and display-registration timing; startup now reaches a verified 240 Hz mirrored mode. Failure rollback and explicit Stop restored the original 60 Hz mode; Manual-10 in-game snapshots reached 91.5–105 FPS and returned to approximately 60 FPS after Stop. Manual-5 unlocked snapshots reached 125.5–168.5 FPS, and active normal app quit also restored the original display mode. Last-Player exit, crash/hotplug cases and other hardware remain pending.
 - [ ] Roblox install/update/rollback and restoring applied engine/mod backups after recovering a reset archive.
 - [ ] Intel and minimum-supported-macOS runtime acceptance, plus the main supported Apple-silicon configuration.
 
@@ -77,7 +77,7 @@ Unavailable or deliberately replaced behavior must remain documented. It only le
 - [ ] After the pinned workflows merge, remove the temporary v4 allowlist entry and enable the repository SHA-only policy. Enabling it before merge would block old default-branch workflows.
 - [ ] Review the 22 dependency alerts reported by GitHub on the default branch (including inherited legacy dependencies); establish native relevance and a remediation plan.
 - [ ] Release signing/notarization and first-stable installation/update acceptance.
-- [ ] Repeatable benchmark comparison: standard Roblox, AppleBlox with identical settings, then a tuned profile. Record frame consistency and average FPS without assuming an improvement.
+- [ ] Repeatable benchmark comparison: standard Roblox, AppleBlox with identical settings, then a tuned profile. Record frame consistency and average FPS without assuming an improvement. [Initial live overhead observations](BENCHMARKS.md) recorded on M2; idle launcher comparison only, tuned/restarted runs and continuous frame measurements remain pending.
 
 ## Definition of done
 

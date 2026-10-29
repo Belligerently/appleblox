@@ -6,6 +6,11 @@ import DisplayBridge
     private let display = ABTemporaryDisplay()
     var active: Bool { display.isActive }
     func start() throws { try display.begin() }
+    func finishStart() throws -> Bool {
+        var ready: ObjCBool = false
+        try display.mirrorWhenReady(&ready)
+        return ready.boolValue
+    }
     func stop() throws { try display.stop() }
 }
 

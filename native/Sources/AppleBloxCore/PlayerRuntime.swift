@@ -22,7 +22,12 @@ public struct PlayerInstances: Equatable, Sendable {
 @MainActor public protocol TemporaryDisplayDriver: AnyObject {
     var active: Bool { get }
     func start() throws
+    func finishStart() throws -> Bool
     func stop() throws
+}
+
+public extension TemporaryDisplayDriver {
+    func finishStart() throws -> Bool { true }
 }
 
 /// Coordinates main-thread display resources with Player lifetime; no display API is used in tests.
@@ -30,12 +35,19 @@ public struct PlayerInstances: Equatable, Sendable {
     private let driver: any TemporaryDisplayDriver
     public init(driver: any TemporaryDisplayDriver) { self.driver = driver }
     public var active: Bool { driver.active }
-    @discardableResult public func prepare(enabled: Bool, players: PlayerInstances) throws -> Bool {
+    @discardableResult public func prepare(enabled: Bool, players: PlayerInstances) async throws -> Bool {
         guard enabled, !active else { return false }
         guard players.count == 0 else { throw FeatureError.message("Quit all Roblox Players before starting the FPS workaround.") }
+        try Task.checkCancellation()
         try driver.start()
         guard active else { throw FeatureError.message("The temporary display did not become active.") }
-        return true
+        for _ in 0..<50 {
+            try Task.checkCancellation()
+            guard active else { throw FeatureError.message("The temporary display was stopped before it became ready.") }
+            if try driver.finishStart() { return true }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        throw FeatureError.message("macOS did not register the temporary display within five seconds.")
     }
     public func stop() throws { if active { try driver.stop() } }
     public func playersChanged(_ players: PlayerInstances) throws { if players.count == 0 { try stop() } }

@@ -241,7 +241,7 @@ final class LauncherModel {
             let requestedURL = try link?.isLauncherOnly == true ? nil : (link?.url ?? shortcut?.validated().launchURL)
             let plan = try PlayerLaunchPlan(url: requestedURL, legacyResolution: configuration.features.legacyResolution,
                                             newInstance: configuration.features.newPlayerInstance, playerRunning: isRunning)
-            startedDisplayHere = try fpsSession.prepare(enabled: configuration.features.experimentalFPSWorkaround, players: before)
+            startedDisplayHere = try await fpsSession.prepare(enabled: configuration.features.experimentalFPSWorkaround, players: before)
             fpsActive = fpsSession.active
             if fpsActive { fpsStatus = "Temporary 240 Hz display active while Players are running." }
             let mappedGame = shortcut ?? link?.placeID.flatMap { id in configuration.shortcuts.first { $0.placeID == id } }

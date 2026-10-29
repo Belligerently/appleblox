@@ -6,6 +6,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, readonly, getter=isActive) BOOL active;
 @property(class, nonatomic, readonly) BOOL available;
 - (BOOL)beginWithError:(NSError **)error NS_SWIFT_NAME(begin());
+/// Successful calls set ready to NO while registering and YES once mirrored.
+- (BOOL)mirrorWhenReady:(BOOL *)ready error:(NSError **)error NS_SWIFT_NAME(mirrorWhenReady(_:));
 - (BOOL)stopWithError:(NSError **)error NS_SWIFT_NAME(stop());
 @end
 NS_ASSUME_NONNULL_END

@@ -7,17 +7,55 @@ import Testing
     var active = false
     var starts = 0, stops = 0
     var failStart = false, failStop = false, failAfterActivation = false
+    var pendingChecks = 0, readinessChecks = 0
     func start() throws {
         starts += 1
         if failStart { throw FeatureError.message("Fixture start failed") }
         active = true
         if failAfterActivation { throw FeatureError.message("Fixture partial start failed") }
     }
+    func finishStart() throws -> Bool {
+        readinessChecks += 1
+        return readinessChecks > pendingChecks
+    }
     func stop() throws {
         stops += 1
         if failStop { throw FeatureError.message("Fixture restoration failed") }
         active = false
     }
+}
+
+@MainActor @Test func fpsWaitsForRegistrationBeforeConfirmingStartup() async throws {
+    let driver = FakeDisplay()
+    driver.pendingChecks = 2
+    let session = FPSWorkaroundSession(driver: driver)
+    let started = try await session.prepare(enabled: true, players: PlayerInstances([]))
+    #expect(started && driver.readinessChecks == 3 && driver.starts == 1)
+    try session.stop()
+}
+
+@MainActor @Test func fpsCancellationDuringRegistrationKeepsCleanupOwnership() async throws {
+    let driver = FakeDisplay()
+    driver.pendingChecks = 100
+    let session = FPSWorkaroundSession(driver: driver)
+    let pending = Task { try await session.prepare(enabled: true, players: PlayerInstances([])) }
+    while driver.readinessChecks == 0 { await Task.yield() }
+    pending.cancel()
+    await #expect(throws: CancellationError.self) { try await pending.value }
+    #expect(session.active)
+    try session.launchFailed(startedHere: session.active, players: PlayerInstances([]))
+    #expect(!session.active && driver.stops == 1)
+}
+
+@MainActor @Test func fpsStopWhileRegisteringCannotReportSuccessfulStartup() async throws {
+    let driver = FakeDisplay()
+    driver.pendingChecks = 100
+    let session = FPSWorkaroundSession(driver: driver)
+    let pending = Task { try await session.prepare(enabled: true, players: PlayerInstances([])) }
+    while driver.readinessChecks == 0 { await Task.yield() }
+    try session.stop()
+    await #expect(throws: FeatureError.self) { try await pending.value }
+    #expect(!session.active && driver.stops == 1)
 }
 
 @Test func instanceSnapshotsOnlyTreatLastExitAsPlayerClosed() {
@@ -39,23 +77,23 @@ import Testing
     #expect(PlayerLaunchOutcome.evaluate(requestNew: false, before: [], after: [], reportedPID: 0) == .unconfirmed)
 }
 
-@MainActor @Test func fpsDefaultOffDoesNotTouchDisplayAndNeedsAFreshPlayer() throws {
+@MainActor @Test func fpsDefaultOffDoesNotTouchDisplayAndNeedsAFreshPlayer() async throws {
     let driver = FakeDisplay()
     let owned = FPSWorkaroundSession(driver: driver)
-    let started = try owned.prepare(enabled: false, players: PlayerInstances([]))
+    let started = try await owned.prepare(enabled: false, players: PlayerInstances([]))
     #expect(!started && driver.starts == 0)
-    #expect(throws: FeatureError.self) { try owned.prepare(enabled: true, players: PlayerInstances([123])) }
+    await #expect(throws: FeatureError.self) { try await owned.prepare(enabled: true, players: PlayerInstances([123])) }
     #expect(driver.starts == 0)
     try owned.stop()
     #expect(driver.stops == 0)
 }
 
-@MainActor @Test func fpsStartsOnceAndStaysActiveUntilTheLastPlayerCloses() throws {
+@MainActor @Test func fpsStartsOnceAndStaysActiveUntilTheLastPlayerCloses() async throws {
     let driver = FakeDisplay()
     let owned = FPSWorkaroundSession(driver: driver)
-    let started = try owned.prepare(enabled: true, players: PlayerInstances([]))
+    let started = try await owned.prepare(enabled: true, players: PlayerInstances([]))
     #expect(started && owned.active && driver.starts == 1)
-    let repeated = try owned.prepare(enabled: true, players: PlayerInstances([123]))
+    let repeated = try await owned.prepare(enabled: true, players: PlayerInstances([123]))
     #expect(!repeated && driver.starts == 1)
     try owned.playersChanged(PlayerInstances([123, 456]))
     try owned.playersChanged(PlayerInstances([456]))
@@ -66,10 +104,10 @@ import Testing
     #expect(driver.stops == 1)
 }
 
-@MainActor @Test func fpsLaunchFailureRollsBackOnlyWhenNoPlayerRemained() throws {
+@MainActor @Test func fpsLaunchFailureRollsBackOnlyWhenNoPlayerRemained() async throws {
     let driver = FakeDisplay()
     let session = FPSWorkaroundSession(driver: driver)
-    _ = try session.prepare(enabled: true, players: PlayerInstances([]))
+    _ = try await session.prepare(enabled: true, players: PlayerInstances([]))
     try session.launchFailed(startedHere: true, players: PlayerInstances([123]))
     #expect(session.active)
     try session.launchFailed(startedHere: false, players: PlayerInstances([]))
@@ -78,10 +116,10 @@ import Testing
     #expect(!session.active && driver.stops == 1)
 }
 
-@MainActor @Test func fpsFailedRestorationRetainsOwnershipForRetryAndQuitCleanup() throws {
+@MainActor @Test func fpsFailedRestorationRetainsOwnershipForRetryAndQuitCleanup() async throws {
     let driver = FakeDisplay()
     let session = FPSWorkaroundSession(driver: driver)
-    _ = try session.prepare(enabled: true, players: PlayerInstances([]))
+    _ = try await session.prepare(enabled: true, players: PlayerInstances([]))
     driver.failStop = true
     #expect(throws: FeatureError.self) { try session.stop() }
     #expect(session.active)
@@ -89,7 +127,7 @@ import Testing
     try session.stop()
     #expect(!session.active && driver.stops == 2)
     driver.failStart = true
-    #expect(throws: FeatureError.self) { try session.prepare(enabled: true, players: PlayerInstances([])) }
+    await #expect(throws: FeatureError.self) { try await session.prepare(enabled: true, players: PlayerInstances([])) }
     #expect(!session.active)
 }
 
@@ -166,11 +204,11 @@ import Testing
     #expect(try await reader.poll(directory: root).isEmpty)
 }
 
-@MainActor @Test func fpsPartialStartFailureRemainsOwnedUntilRollback() throws {
+@MainActor @Test func fpsPartialStartFailureRemainsOwnedUntilRollback() async throws {
     let driver = FakeDisplay()
     driver.failAfterActivation = true
     let session = FPSWorkaroundSession(driver: driver)
-    #expect(throws: FeatureError.self) { try session.prepare(enabled: true, players: PlayerInstances([])) }
+    await #expect(throws: FeatureError.self) { try await session.prepare(enabled: true, players: PlayerInstances([])) }
     #expect(session.active)
     try session.launchFailed(startedHere: session.active, players: PlayerInstances([]))
     #expect(!session.active && driver.stops == 1)
